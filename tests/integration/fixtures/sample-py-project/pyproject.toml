@@ -1,0 +1,18 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "sample-py-project"
+version = "0.1.0"
+description = "A sample Python project for testing ai_code2doc"
+authors = ["Test Author <test@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.110.0"
+uvicorn = "^0.29.0"
+pydantic = "^2.6"
+
+[tool.poetry.dev-dependencies]
+pytest = "^8.0"
