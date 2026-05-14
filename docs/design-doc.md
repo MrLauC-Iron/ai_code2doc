@@ -1,8 +1,8 @@
 # ai_code2doc 设计文档
 
-> 版本: 0.1.0
-> 更新日期: 2026-05-12
-> 状态: 初始版本
+> 版本: 0.2.0
+> 更新日期: 2026-05-14
+> 状态: 新增 CMake 构建系统集成
 
 ---
 
@@ -13,6 +13,7 @@
 ai_code2doc 是一个 AI 驱动的代码文档生成工具，面向 Python / C / C++ 项目，自动扫描、解析、分析代码结构，并生成分层文档。核心价值在于：
 
 - **多语言 AST 解析** — 基于 tree-sitter 的精确代码结构提取
+- **CMake 构建系统集成** — 解析 CMakeLists.txt 提取 target/include/link 信息，改善 #include 解析和依赖分析
 - **分层知识体系** — 项目概览 → 模块文档 → 依赖图三层递进
 - **增量分析** — 基于文件哈希的变更检测，二次运行仅处理变化部分
 - **LLM 增强** — 可选接入 GPT-4o 生成自然语言叙述
@@ -95,6 +96,7 @@ ai_code2doc/
 │   └── settings.py       # Pydantic Settings，环境变量绑定
 ├── models/               # 数据模型（Pydantic v2）
 │   ├── module.py         # FunctionInfo, ClassInfo, InterfaceInfo, ImportInfo, FileInfo
+│   ├── build.py          # CMakeTarget, CMakeProjectInfo
 │   ├── knowledge.py      # KnowledgeDocument, ModuleSummary
 │   ├── project.py        # TechStack, ProjectMetadata
 │   ├── graph.py          # DependencyEdge, CallChain, ImpactHint, CycleInfo
@@ -109,9 +111,11 @@ ai_code2doc/
 │   ├── base_parser.py    # BaseParser（解析基类）
 │   ├── base_resolver.py  # BaseImportResolver（导入解析基类）
 │   ├── tree_sitter_parser.py # TreeSitterParser（统一解析入口）
+│   ├── build/            # 构建系统解析
+│   │   └── cmake_parser.py # CMakeParser（CMakeLists.txt 解析）
 │   └── languages/        # 语言实现
 │       ├── python.py     # Python 适配器
-│       └── c_cpp.py      # C/C++ 适配器
+│       └── c_cpp.py      # C/C++ 适配器（CMake 感知）
 ├── analyzer/             # 代码分析
 │   ├── tech_stack.py     # TechStackDetector（技术栈检测）
 │   ├── dependency_graph.py # DependencyGraphBuilder（依赖图构建）
@@ -252,6 +256,29 @@ FileState
 └── file_size: int
 ```
 
+### 3.5 构建系统模型 (`models/build.py`)
+
+从 CMakeLists.txt 中提取的构建元数据，用于增强 C/C++ 项目的分析精度。
+
+```
+CMakeTarget
+├── name: str                    # 目标名，如 "my_app"
+├── target_type: str             # "executable" | "static_library" | "shared_library"
+│                                #   "module_library" | "object_library" | "interface_library"
+├── sources: list[str]           # 源文件路径（相对于项目根目录）
+├── include_dirs: list[str]      # include 目录（来自 target_include_directories）
+├── link_libraries: list[str]    # 链接库（来自 target_link_libraries）
+└── cmake_file: str              # 定义该 target 的 CMakeLists.txt 路径
+
+CMakeProjectInfo
+├── cmake_version: str           # cmake_minimum_required 版本号
+├── project_name: str            # project() 名称
+├── project_languages: list[str] # project() 声明的语言（C, CXX, CUDA ...）
+├── subdirectories: list[str]    # add_subdirectory 路径
+├── find_packages: list[str]     # find_package 名称（第三方依赖）
+└── targets: dict[str, CMakeTarget]  # target_name → CMakeTarget
+```
+
 ---
 
 ## 4. 处理流水线
@@ -259,15 +286,17 @@ FileState
 ### 4.1 五阶段流水线
 
 ```
-Stage 1: SCAN          Stage 2: PARSE         Stage 3: ANALYZY
+Stage 1: SCAN          Stage 2: PARSE         Stage 3: ANALYZE
 ┌─────────────┐       ┌─────────────┐        ┌─────────────┐
 │ProjectScanner│      │TreeSitter    │        │TechStack    │
 │  FileFilter  │──────►│Parser       │───────►│Detector     │
 │ChangeDetector│      │Language      │        │Dependency   │
-└─────────────┘       │Registry     │        │GraphBuilder │
-                      └─────────────┘        │MetricsCalc  │
-                                              └──────┬──────┘
-                                                     │
+│             │      │Registry     │        │GraphBuilder │
+└──────┬──────┘       └─────────────┘        │MetricsCalc  │
+       │               ┌─────────────┐        └──────┬──────┘
+       │               │CMakeParser  │               │
+       └──────────────►│(C/C++ 项目) │               │
+                       └─────────────┘               │
 Stage 4: GENERATE          Stage 5: PUBLISH           │
 ┌─────────────┐           ┌─────────────┐            │
 │Layer1       │           │Markdown     │            │
@@ -305,11 +334,11 @@ Stage 4: GENERATE          Stage 5: PUBLISH           │
   默认 500KB，可配置
 ```
 
-### 4.3 Stage 2 — AST 解析
+### 4.3 Stage 2 — AST 解析 + 构建系统解析
 
-**入口**: `TreeSitterParser.parse_file(file_path)`
+**入口**: `TreeSitterParser.parse_file(file_path)` + `CMakeParser().parse(project_root)`
 
-**流程**:
+**AST 解析流程**:
 1. 根据文件扩展名从 `LanguageRegistry` 查找 `LanguageAdapter`
 2. 用 tree-sitter 将源码解析为 CST（Concrete Syntax Tree）
 3. 调用语言特定的 `StructureExtractor` 遍历 CST，提取:
@@ -319,6 +348,30 @@ Stage 4: GENERATE          Stage 5: PUBLISH           │
    - 导出声明（`__all__` 等）
 4. 调用语言特定的 `ImportResolver` 解析导入路径
 5. 输出: `FileInfo` 对象
+
+**CMake 构建系统解析**（仅 C/C++ 项目）:
+
+当项目根目录存在 `CMakeLists.txt` 时，`CMakeParser` 遍历所有 CMakeLists.txt 文件，提取:
+
+| CMake 命令 | 提取内容 | 用途 |
+|-----------|---------|------|
+| `cmake_minimum_required` | CMake 版本号 | 技术栈展示 |
+| `project()` | 项目名称、语言 | 技术栈检测 |
+| `add_subdirectory` | 子目录路径 | 模块结构发现 |
+| `find_package` | 第三方包名 | 填充 `TechStack.dependencies` |
+| `add_executable` | 可执行 target + 源文件 | 入口点检测 |
+| `add_library` | 库 target + 源文件 | 依赖图构建 |
+| `target_include_directories` | include 目录列表 | **改善 #include 解析精度** |
+| `target_link_libraries` | 链接库名称 | **Layer 3 构建依赖图** |
+| `target_sources` | 追加源文件列表 | target → 文件映射 |
+
+**CMake 信息对 #include 解析的增强**:
+
+`CCppImportResolver` 接收 `CMakeProjectInfo` 后，在 `resolve()` 中额外搜索:
+1. 判断 `from_file` 属于哪个 CMake target（通过 `sources` 列表匹配）
+2. 搜索该 target 声明的所有 `include_dirs`
+3. 搜索该 target 链接的其他 target 的 `include_dirs`（传递性可见）
+4. 无 CMake 信息时行为不变，完全向后兼容
 
 **语言适配器模式**:
 
@@ -343,9 +396,12 @@ class LanguageAdapter:
 
 #### 4.4.1 TechStackDetector
 
-检测项目技术栈:
+检测项目技术栈，接收可选的 `CMakeProjectInfo` 以增强 C/C++ 项目的检测:
 - **Python**: 解析 `pyproject.toml`（Poetry / setuptools）、`requirements.txt`、`setup.py`
-- **C/C++**: 解析 `CMakeLists.txt`、`Makefile`、`configure.ac`
+- **C/C++**:
+  - 基础检测: `CMakeLists.txt`、`Makefile`、`meson.build`、`WORKSPACE/BUILD`、`.sln`/`.vcxproj`
+  - **CMake 增强**: `find_package` 结果 → `TechStack.dependencies`，`project()` 语言列表 → 语言检测
+  - 框架检测: `Qt::`、`Boost::`、`.pro` 文件
 - **输出**: `TechStack(language, frameworks, build_tool, package_manager, dependencies, entry_points)`
 
 #### 4.4.2 DependencyGraphBuilder
@@ -373,9 +429,10 @@ class LanguageAdapter:
 
 #### Layer 1 — 项目概览 (`Layer1OverviewGenerator`)
 
-- **输入**: 项目结构、技术栈、度量、入口点
+- **输入**: 项目结构、技术栈、度量、入口点、CMake 构建信息（如有）
 - **输出**: 单个 `README.md`
-- **内容**: 项目目的、架构类型、技术栈、目录结构、入口点、关键设计模式
+- **内容**: 项目目的、架构类型、技术栈（含 CMake 版本）、目录结构、入口点、**构建目标表格**（CMake target 名称、类型、源文件）、关键设计模式
+- **CMake 增强**: 新增 "Build Targets" 章节展示所有 CMake target；技术栈表格中增加 CMake Version 行
 - **可选 LLM 增强**: 生成自然语言项目描述
 
 #### Layer 2 — 模块文档 (`Layer2ModuleGenerator`)
@@ -387,9 +444,9 @@ class LanguageAdapter:
 
 #### Layer 3 — 依赖图 (`Layer3GraphGenerator`)
 
-- **输入**: 完整依赖图、度量、循环依赖、影响分析
+- **输入**: 完整依赖图、度量、循环依赖、影响分析、CMake 构建信息（如有）
 - **输出**: `dependency-graph.md` + `dependency-graph.mmd`
-- **内容**: Mermaid 可视化、环检测报告、影响分析、耦合度量
+- **内容**: Mermaid 可视化、环检测报告、影响分析、耦合度量、**构建目标依赖图**（`target_link_libraries` 生成的 Mermaid 子图）、**target 详情表格**（target 名称、类型、链接库、源文件）、**find_package 第三方依赖列表**
 - **纯静态生成**，不依赖 LLM
 
 ### 4.6 Stage 5 — 发布
@@ -477,9 +534,20 @@ class LanguageAdapter:
 | `enum_specifier` | 存入 extract_extra_metadata |
 
 **导入解析** (`CCppImportResolver`):
-- `#include "header.h"` — 在当前目录和 `include/` 目录中查找
+- `#include "header.h"` — 搜索顺序: ① 当前文件目录 → ② `include/`/`src/` 默认目录 → ③ CMake `target_include_directories` 声明的目录 → ④ 传递链接 target 的 include 目录
 - `#include <stdio.h>` — 系统头文件，返回 `None`
 - 支持相对路径: `#include "sub/header.h"`
+- **CMake 增强**: 接收 `CMakeProjectInfo`，利用 `target_include_directories` 和传递性链接关系改善跨目录 `#include` 解析
+
+**技术栈检测** (`detect_ccpp_tech_stack`):
+- 接收可选 `CMakeProjectInfo` 参数
+- `find_package` 结果自动填入 `TechStack.dependencies`（如 `Boost`、`Qt6`、`Threads`）
+- `project()` 语言列表替代基于文件扩展名的语言检测
+
+**入口点检测** (`detect_ccpp_entry_points`):
+- 接收可选 `CMakeProjectInfo` 参数
+- 从 `add_executable` target 的 `sources` 列表精确匹配含 `main` 的源文件
+- 无 CMake 信息时回退到正则搜索和 `add_executable` 目标名猜测
 
 ### 6.3 扩展新语言
 
@@ -707,6 +775,13 @@ ai_code2doc serve --host 0.0.0.0 --port 8420
 - **性能**: 纯 Python 实现，对于代码项目规模（百~千节点）足够
 - **可视化**: 可导出 Mermaid / Graphviz 格式
 
+### 13.6 为什么用轻量正则解析 CMake 而非完整 CMake 解析器
+
+- **无重依赖**: 完整的 CMake 解析器（如 `cmake-language-server`）体积大且依赖复杂
+- **够用**: 只需提取 9 个命令的关键参数，正则 + 括号平衡即可
+- **容错**: 对缺失参数、嵌套 generator 表达式、条件语句等场景不崩溃，只提取能提取的部分
+- **不过度设计**: CMakeLists.txt 的复杂度没有上限（if/else/foreach/function），完整解析不现实
+
 ---
 
 ## 14. 性能考量
@@ -749,15 +824,20 @@ ai_code2doc serve --host 0.0.0.0 --port 8420
 ├── 纯函数测试: hashing, path_utils, markdown_utils
 ├── 模型测试: models, token_tracker
 ├── 组件测试: scanner, parse_cache, language_registry, metrics
-└── 生成器测试: prompt_templates, markdown_writer, chunker
+├── 生成器测试: prompt_templates, markdown_writer, chunker
+├── CMake 解析: cmake_parser（29 用例）
+└── CMake 解析器集成: c_cpp_resolver_cmake（5 用例）
 
 集成测试 (tests/integration/)
 ├── Python 解析: 函数/类/导入提取 + 完整项目解析
 ├── C 解析: 函数/结构体/include 提取 + 完整项目解析
 ├── 依赖图: 图构建 + 环检测 + 影响分析 + 拓扑排序
 ├── 技术栈: pyproject.toml / CMake / Makefile 检测
-└── 变更检测: 增量分析 + 状态持久化
+├── 变更检测: 增量分析 + 状态持久化
+└── CMake 集成: 构建信息解析 → 技术栈 → 依赖图 → 入口点（5 用例）
 ```
+
+**总计**: 216 项测试
 
 ### 16.2 Fixture 项目
 
@@ -782,6 +862,12 @@ ai_code2doc serve --host 0.0.0.0 --port 8420
   generator/layer1_overview.py (导入 9 个模块)
 
 循环依赖: 无
+
+CMake 构建系统集成:
+  parser/build/cmake_parser.py  → 被 generator/layer1、generator/layer3、
+                                   analyzer/tech_stack 引用
+  models/build.py               → 被 parser/build、parser/languages/c_cpp、
+                                   generator/layer1、generator/layer3 引用
 ```
 
 ## 附录 B: 外部依赖清单
