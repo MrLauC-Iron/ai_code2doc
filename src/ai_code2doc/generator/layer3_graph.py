@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ai_code2doc.analyzer.dependency_graph import DependencyGraphBuilder
 from ai_code2doc.analyzer.metrics import MetricsCalculator
@@ -22,6 +23,9 @@ from ai_code2doc.llm.client import LLMClient
 from ai_code2doc.models.knowledge import KnowledgeDocument
 from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
 from ai_code2doc.scanner.project_scanner import ProjectScanner
+
+if TYPE_CHECKING:
+    from ai_code2doc.models.build import CMakeProjectInfo
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +88,12 @@ class Layer3GraphGenerator(BaseGenerator):
         for fi in file_infos:
             graph_builder.add_file(fi)
         graph = graph_builder.build()
+
+        # 3b. Parse CMake build info if available
+        cmake_info: CMakeProjectInfo | None = None
+        if (project_root / "CMakeLists.txt").is_file():
+            from ai_code2doc.parser.build.cmake_parser import CMakeParser
+            cmake_info = CMakeParser().parse(project_root)
 
         # 4. Compute structural metrics
         calculator = MetricsCalculator()
@@ -149,6 +159,7 @@ class Layer3GraphGenerator(BaseGenerator):
                 node_count=node_count,
                 edge_count=edge_count,
                 metrics_text=metrics_text,
+                cmake_info=cmake_info,
             )
 
         # 12. Assemble the knowledge document
@@ -253,6 +264,7 @@ class Layer3GraphGenerator(BaseGenerator):
         node_count: int,
         edge_count: int,
         metrics_text: str,
+        cmake_info: CMakeProjectInfo | None = None,
     ) -> str:
         """Build a purely static dependency graph analysis document."""
         sections: list[str] = []
@@ -333,6 +345,51 @@ class Layer3GraphGenerator(BaseGenerator):
 
         # Metrics summary
         sections.append("### Metrics Summary\n\n```\n" + metrics_text + "\n```")
+
+        # CMake Build Target Dependencies
+        if cmake_info and cmake_info.targets:
+            cmake_sections: list[str] = [
+                "## Build Target Dependencies\n\n"
+                "Dependencies between CMake build targets (from ``target_link_libraries``):\n\n",
+            ]
+
+            # Build target mermaid diagram
+            has_links = any(t.link_libraries for t in cmake_info.targets.values())
+            if has_links:
+                lines: list[str] = ["```mermaid", "graph LR"]
+                seen_pairs: set[tuple[str, str]] = set()
+                for target in cmake_info.targets.values():
+                    for lib in target.link_libraries:
+                        pair = (target.name, lib)
+                        if pair not in seen_pairs and target.name != lib:
+                            seen_pairs.add(pair)
+                            lines.append(f"    {target.name} --> {lib}")
+                lines.append("```")
+                cmake_sections.append("\n".join(lines))
+
+            # Target details table
+            target_rows = [
+                "| Target | Type | Links | Sources |",
+                "|--------|------|-------|---------|",
+            ]
+            for name, target in cmake_info.targets.items():
+                links = ", ".join(target.link_libraries) if target.link_libraries else "-"
+                srcs = ", ".join(Path(s).name for s in target.sources[:5])
+                if len(target.sources) > 5:
+                    srcs += f" (+{len(target.sources) - 5})"
+                target_rows.append(
+                    f"| `{name}` | {target.target_type} | {links} | {srcs} |"
+                )
+            cmake_sections.append("\n".join(target_rows))
+
+            # find_package list
+            if cmake_info.find_packages:
+                pkg_str = ", ".join(f"`{p}`" for p in cmake_info.find_packages)
+                cmake_sections.append(
+                    f"\n### External Dependencies (find_package)\n\n{pkg_str}"
+                )
+
+            sections.append("\n\n".join(cmake_sections))
 
         return "\n\n".join(sections)
 

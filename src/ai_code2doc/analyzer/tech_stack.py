@@ -7,15 +7,24 @@ Delegates to language-specific detectors registered in the
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ai_code2doc.models.project import TechStack
+
+if TYPE_CHECKING:
+    from ai_code2doc.models.build import CMakeProjectInfo
 
 
 class TechStackDetector:
     """Detects the technology stack of a project by delegating to language adapters."""
 
-    def __init__(self, project_root: Path) -> None:
+    def __init__(
+        self,
+        project_root: Path,
+        cmake_info: CMakeProjectInfo | None = None,
+    ) -> None:
         self.root = project_root
+        self.cmake_info = cmake_info
 
     def _detect_languages_in_project(self) -> list[str]:
         """Scan project files to determine which languages are present."""
@@ -56,7 +65,8 @@ class TechStackDetector:
             adapter = LanguageRegistry.get_by_id(lang_id)
             if adapter is None:
                 continue
-            ts = adapter.detect_tech_stack(self.root)
+            # Pass cmake_info to c_cpp detector if available.
+            ts = adapter.detect_tech_stack(self.root, cmake_info=self.cmake_info)
             merged_deps.update(ts.dependencies)
             merged_dev_deps.update(ts.dev_dependencies)
             if ts.framework and ts.framework != "Unknown":
@@ -89,7 +99,7 @@ class TechStackDetector:
             adapter = LanguageRegistry.get_by_id(lang_id)
             if adapter is None:
                 continue
-            eps = adapter.detect_entry_points(self.root)
+            eps = adapter.detect_entry_points(self.root, cmake_info=self.cmake_info)
             entry_points.extend(eps)
 
         return list(set(entry_points))

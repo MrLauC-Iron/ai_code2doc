@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ai_code2doc.analyzer.tech_stack import TechStackDetector
 from ai_code2doc.analyzer.metrics import MetricsCalculator
@@ -21,6 +21,9 @@ from ai_code2doc.generator.prompt_templates import format_layer1_prompt
 from ai_code2doc.llm.client import LLMClient
 from ai_code2doc.models.knowledge import KnowledgeDocument
 from ai_code2doc.scanner.project_scanner import ProjectScanner
+
+if TYPE_CHECKING:
+    from ai_code2doc.models.build import CMakeProjectInfo
 
 
 class Layer1OverviewGenerator(BaseGenerator):
@@ -66,8 +69,14 @@ class Layer1OverviewGenerator(BaseGenerator):
         scanner = ProjectScanner(project_root)
         scan_result = scanner.scan()
 
-        # 2. Detect the technology stack
-        detector = TechStackDetector(project_root)
+        # 2. Parse CMake build info if available
+        cmake_info: CMakeProjectInfo | None = None
+        if (project_root / "CMakeLists.txt").is_file():
+            from ai_code2doc.parser.build.cmake_parser import CMakeParser
+            cmake_info = CMakeParser().parse(project_root)
+
+        # 3. Detect the technology stack
+        detector = TechStackDetector(project_root, cmake_info=cmake_info)
         tech_stack = detector.detect()
         entry_points = detector.detect_entry_points()
 
@@ -89,7 +98,7 @@ class Layer1OverviewGenerator(BaseGenerator):
         key_files = self._summarize_key_files(scan_result, entry_points, project_root)
 
         # 6. Format the tech stack as a human-readable string
-        tech_stack_str = self._format_tech_stack(tech_stack)
+        tech_stack_str = self._format_tech_stack(tech_stack, cmake_info)
 
         # 7. Build the prompt / static content
         if use_llm:
@@ -110,6 +119,7 @@ class Layer1OverviewGenerator(BaseGenerator):
                 entry_points=entry_points,
                 key_files=key_files,
                 project_metrics=project_metrics,
+                cmake_info=cmake_info,
             )
 
         # 8. Assemble the knowledge document
@@ -237,7 +247,10 @@ class Layer1OverviewGenerator(BaseGenerator):
         return "\n\n".join(summaries) if summaries else "No key files identified."
 
     @staticmethod
-    def _format_tech_stack(tech_stack: Any) -> str:
+    def _format_tech_stack(
+        tech_stack: Any,
+        cmake_info: CMakeProjectInfo | None = None,
+    ) -> str:
         """Return a human-readable description of the tech stack."""
         parts = [
             f"Language: {tech_stack.language}",
@@ -245,6 +258,8 @@ class Layer1OverviewGenerator(BaseGenerator):
             f"Build Tool: {tech_stack.build_tool}",
             f"Package Manager: {tech_stack.package_manager}",
         ]
+        if cmake_info and cmake_info.cmake_version:
+            parts.append(f"CMake Version: {cmake_info.cmake_version}")
         if tech_stack.dependencies:
             dep_names = list(tech_stack.dependencies.keys())[:20]
             parts.append(f"Key Dependencies: {', '.join(dep_names)}")
@@ -290,6 +305,7 @@ class Layer1OverviewGenerator(BaseGenerator):
         entry_points: list[str],
         key_files: str,
         project_metrics: Any,
+        cmake_info: CMakeProjectInfo | None = None,
     ) -> str:
         """Build a purely static overview document without LLM assistance."""
         sections: list[str] = []
@@ -302,15 +318,37 @@ class Layer1OverviewGenerator(BaseGenerator):
         )
 
         # Technology Stack
+        tech_rows = [
+            f"| Language | {tech_stack.language} |",
+            f"| Framework | {tech_stack.framework} |",
+            f"| Build Tool | {tech_stack.build_tool} |",
+            f"| Package Manager | {tech_stack.package_manager} |",
+        ]
+        if cmake_info and cmake_info.cmake_version:
+            tech_rows.append(f"| CMake Version | {cmake_info.cmake_version} |")
+
         sections.append(
             "## Technology Stack\n\n"
-            f"| Attribute | Value |\n"
-            f"|---|---|\n"
-            f"| Language | {tech_stack.language} |\n"
-            f"| Framework | {tech_stack.framework} |\n"
-            f"| Build Tool | {tech_stack.build_tool} |\n"
-            f"| Package Manager | {tech_stack.package_manager} |\n"
+            "| Attribute | Value |\n"
+            "|---|---|\n"
+            + "\n".join(tech_rows)
         )
+
+        # CMake Build Targets
+        if cmake_info and cmake_info.targets:
+            target_rows = [
+                "| Target | Type | Sources |",
+                "|--------|------|---------|",
+            ]
+            for name, target in cmake_info.targets.items():
+                srcs = ", ".join(Path(s).name for s in target.sources[:5])
+                if len(target.sources) > 5:
+                    srcs += f" (+{len(target.sources) - 5} more)"
+                target_rows.append(f"| `{name}` | {target.target_type} | {srcs} |")
+            sections.append(
+                "## Build Targets\n\n"
+                + "\n".join(target_rows)
+            )
 
         if tech_stack.dependencies:
             dep_lines = []

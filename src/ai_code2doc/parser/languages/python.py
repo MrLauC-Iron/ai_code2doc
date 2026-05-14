@@ -660,7 +660,7 @@ def _merge_dependencies(
     return deps, framework, build_tool, pkg_manager
 
 
-def detect_python_tech_stack(project_root: Path) -> TechStack:
+def detect_python_tech_stack(project_root: Path, **kwargs: object) -> TechStack:
     """Detect the Python tech stack by inspecting project metadata files."""
     deps: dict[str, str] = {}
     dev_deps: dict[str, str] = {}
@@ -833,7 +833,7 @@ _ENTRY_POINT_CANDIDATES = [
 _SRC_ENTRY_PREFIXES = ["src"]
 
 
-def detect_python_entry_points(project_root: Path) -> list[str]:
+def detect_python_entry_points(project_root: Path, **kwargs: object) -> list[str]:
     """Detect Python entry-point files for the project."""
     entry_points: list[str] = []
 

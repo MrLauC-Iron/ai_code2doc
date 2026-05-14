@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 project(sample_c_project C)
 
-add_executable(sample_c_project
-    src/main.c
-    src/utils.c
-    src/math_ops.c
-)
+find_package(Math)
 
-target_include_directories(sample_c_project PRIVATE include)
+add_library(utils STATIC src/utils.c)
+target_include_directories(utils PUBLIC include)
+
+add_library(math_ops STATIC src/math_ops.c)
+target_link_libraries(math_ops PUBLIC utils)
+
+add_executable(sample_c_project src/main.c)
+target_link_libraries(sample_c_project PRIVATE utils math_ops)

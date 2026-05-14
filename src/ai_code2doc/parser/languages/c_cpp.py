@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import tree_sitter_c as tsc
 import tree_sitter_cpp as tscpp
@@ -30,6 +31,9 @@ from ai_code2doc.parser.languages._common import (
     child_by_field,
     strip_quotes,
 )
+
+if TYPE_CHECKING:
+    from ai_code2doc.models.build import CMakeProjectInfo
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -439,7 +443,15 @@ class CCppExtractor(BaseStructureExtractor):
 
 
 class CCppImportResolver(BaseImportResolver):
-    """Resolve C/C++ ``#include`` directives to file paths."""
+    """Resolve C/C++ ``#include`` directives to file paths.
+
+    If a :class:`CMakeProjectInfo` is provided at construction time, the
+    resolver also searches directories declared via
+    ``target_include_directories`` in CMakeLists.txt.
+    """
+
+    def __init__(self, cmake_info: CMakeProjectInfo | None = None) -> None:
+        self.cmake_info = cmake_info
 
     def resolve(
         self,
@@ -454,47 +466,95 @@ class CCppImportResolver(BaseImportResolver):
             return None
 
         # Try relative to the importing file's directory first.
-        candidate = from_file.parent / import_source
+        result = self._try_dir(from_file.parent, import_source, project_root)
+        if result:
+            return result
+
+        # Try default directories (include/, src/)
+        for dir_candidate in (project_root / "include", project_root / "src"):
+            result = self._try_dir(dir_candidate, import_source, project_root)
+            if result:
+                return result
+
+        # Try CMake-declared include directories.
+        if self.cmake_info:
+            cmake_dirs = self._get_include_dirs_for_file(from_file, project_root)
+            for inc_dir in cmake_dirs:
+                full_dir = project_root / inc_dir
+                result = self._try_dir(full_dir, import_source, project_root)
+                if result:
+                    return result
+
+        return None
+
+    @staticmethod
+    def _try_dir(directory: Path, import_source: str, project_root: Path) -> Path | None:
+        """Try to resolve *import_source* within *directory*."""
+        if not directory.is_dir():
+            return None
+
+        # Exact path
+        candidate = directory / import_source
         if candidate.is_file():
             try:
                 return candidate.relative_to(project_root)
             except ValueError:
                 return candidate
 
-        # Try with various extensions if the source has none or a wrong one.
+        # Try with common extensions
         for ext in _INCLUDE_EXTENSIONS:
-            candidate = from_file.parent / (import_source + ext)
-            if not candidate.is_file():
-                # Also try without adding duplicate extensions
-                candidate = from_file.parent / import_source
+            candidate = directory / (import_source + ext)
             if candidate.is_file():
                 try:
                     return candidate.relative_to(project_root)
                 except ValueError:
                     return candidate
-
-        # Try project_root / include /
-        for dir_candidate in (
-            project_root / "include",
-            project_root / "src",
-        ):
-            if not dir_candidate.is_dir():
-                continue
-            candidate = dir_candidate / import_source
-            if candidate.is_file():
-                try:
-                    return candidate.relative_to(project_root)
-                except ValueError:
-                    return candidate
-            for ext in _INCLUDE_EXTENSIONS:
-                candidate = dir_candidate / (import_source + ext)
-                if candidate.is_file():
-                    try:
-                        return candidate.relative_to(project_root)
-                    except ValueError:
-                        return candidate
 
         return None
+
+    def _get_include_dirs_for_file(
+        self, from_file: Path, project_root: Path
+    ) -> list[str]:
+        """Return CMake include directories relevant for *from_file*."""
+        if not self.cmake_info:
+            return []
+
+        dirs: list[str] = []
+        seen: set[str] = set()
+
+        # 1. Find the target that contains this source file.
+        try:
+            rel = str(from_file.relative_to(project_root)).replace("\\", "/")
+        except ValueError:
+            return []
+
+        owning_target: CMakeTarget | None = None
+        for target in self.cmake_info.targets.values():
+            if rel in target.sources:
+                owning_target = target
+                break
+
+        # 2. Add include dirs from the owning target (all visibilities).
+        if owning_target:
+            for d in owning_target.include_dirs:
+                if d not in seen:
+                    dirs.append(d)
+                    seen.add(d)
+
+        # 3. Add PUBLIC/INTERFACE include dirs from all targets
+        #    (these are transitively visible).
+        for target in self.cmake_info.targets.values():
+            if target is owning_target:
+                continue
+            # We can't distinguish PUBLIC vs PRIVATE without more info,
+            # so include all directories from targets that are linked.
+            if owning_target and target.name in owning_target.link_libraries:
+                for d in target.include_dirs:
+                    if d not in seen:
+                        dirs.append(d)
+                        seen.add(d)
+
+        return dirs
 
 
 # ---------------------------------------------------------------------------
@@ -510,13 +570,17 @@ def _has_files_with_ext(project_root: Path, extensions: set[str]) -> bool:
     return False
 
 
-def detect_ccpp_tech_stack(project_root: Path) -> TechStack:
+def detect_ccpp_tech_stack(
+    project_root: Path,
+    cmake_info: CMakeProjectInfo | None = None,
+) -> TechStack:
     """Detect the C/C++ technology stack for *project_root*."""
 
     build_tool = ""
     package_manager = ""
     framework = ""
     language = ""
+    dependencies: dict[str, str] = {}
 
     # -- Build tool ---------------------------------------------------------
     if (project_root / "CMakeLists.txt").is_file():
@@ -543,8 +607,13 @@ def detect_ccpp_tech_stack(project_root: Path) -> TechStack:
         package_manager = "Conan"
 
     # -- Language detection -------------------------------------------------
-    has_c = _has_files_with_ext(project_root, _C_ONLY_EXTENSIONS)
-    has_cpp = _has_files_with_ext(project_root, _CPP_ONLY_EXTENSIONS)
+    if cmake_info and cmake_info.project_languages:
+        langs = cmake_info.project_languages
+        has_c = "C" in langs
+        has_cpp = any(l in langs for l in ("CXX", "CPP", "C++"))
+    else:
+        has_c = _has_files_with_ext(project_root, _C_ONLY_EXTENSIONS)
+        has_cpp = _has_files_with_ext(project_root, _CPP_ONLY_EXTENSIONS)
 
     if has_c and has_cpp:
         language = "C/C++"
@@ -567,11 +636,17 @@ def detect_ccpp_tech_stack(project_root: Path) -> TechStack:
             framework = "CUDA"
         break
 
+    # -- Dependencies from CMake find_package --------------------------------
+    if cmake_info and cmake_info.find_packages:
+        for pkg in cmake_info.find_packages:
+            dependencies[pkg] = ""
+
     return TechStack(
         language=language,
         build_tool=build_tool,
         framework=framework,
         package_manager=package_manager,
+        dependencies=dependencies,
     )
 
 
@@ -617,7 +692,10 @@ _MAIN_PATTERN = re.compile(r"\bint\s+main\s*\(|void\s+main\s*\(")
 _ADD_EXEC_PATTERN = re.compile(r"add_executable\s*\(\s*(\w+)")
 
 
-def detect_ccpp_entry_points(project_root: Path) -> list[str]:
+def detect_ccpp_entry_points(
+    project_root: Path,
+    cmake_info: CMakeProjectInfo | None = None,
+) -> list[str]:
     """Detect entry-point files for a C/C++ project."""
 
     entry_points: list[str] = []
@@ -639,9 +717,19 @@ def detect_ccpp_entry_points(project_root: Path) -> list[str]:
                     entry_points.append(rel)
                     seen.add(rel)
 
-    # 2. Parse CMakeLists.txt for add_executable targets
-    for cmake_path in project_root.rglob("CMakeLists.txt"):
-        _add_cmake_executables(cmake_path, project_root, entry_points, seen)
+    # 2. Use CMake target source lists for executable entry points
+    if cmake_info:
+        for target in cmake_info.targets.values():
+            if target.target_type != "executable":
+                continue
+            for src in target.sources:
+                if src not in seen:
+                    entry_points.append(src)
+                    seen.add(src)
+    else:
+        # Fallback: parse CMakeLists.txt for add_executable targets
+        for cmake_path in project_root.rglob("CMakeLists.txt"):
+            _add_cmake_executables(cmake_path, project_root, entry_points, seen)
 
     # 3. Check common entry-file locations
     _check_common_entry_files(project_root, entry_points, seen)
