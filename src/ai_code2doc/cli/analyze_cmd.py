@@ -276,12 +276,43 @@ def register(app: typer.Typer) -> None:
                 table.add_row("Total tokens", f"{u.total_tokens:,}")
                 console.print(table)
 
-        # -- done --------------------------------------------------------------
-        console.print(
-            Panel(
-                f"[bold green]Analysis complete![/bold green]\n"
-                f"Output directory: {output_dir}",
-                title="Done",
-                border_style="green",
-            )
+        # -- build analysis result for REPL ------------------------------------
+        from ai_code2doc.agent.context import AnalysisResult
+
+        analysis_result = AnalysisResult(
+            total_files=len(scan_result.target_files),
+            total_lines=sum(
+                f.stat().st_size if f.exists() else 0
+                for f in scan_result.target_files
+            ) // 40,
+            target_files=scan_result.target_files,
+            docs_generated=all_docs,
         )
+
+        # -- enter interactive REPL --------------------------------------------
+        try:
+            from ai_code2doc.agent.context import AgentContext
+            from ai_code2doc.agent.repl import AgentREPL
+
+            console.print(
+                Panel(
+                    f"[bold green]Analysis complete![/bold green]\n"
+                    f"Output directory: {output_dir}",
+                    title="Done",
+                    border_style="green",
+                )
+            )
+
+            if settings.llm_api_key:
+                ctx = AgentContext(project_root, settings, analysis_result)
+                repl = AgentREPL(ctx)
+                repl.run()
+            else:
+                console.print(
+                    "\n[yellow]No LLM API key configured. Skipping interactive mode.[/yellow] "
+                    "Set AI_CODE2DOC_LLM_API_KEY and re-run to enable the agent.\n"
+                    "You can also run [bold]ai-code2doc chat {project_path}[/bold] "
+                    "after configuring your API key."
+                )
+        except KeyboardInterrupt:
+            console.print("\n[dim]Goodbye![/dim]")

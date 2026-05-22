@@ -17,8 +17,10 @@ from ai_code2doc.cli.analyze_cmd import register as register_analyze
 from ai_code2doc.cli.serve_cmd import register as register_serve
 from ai_code2doc.cli.query_cmd import register as register_query
 from ai_code2doc.cli.status_cmd import register as register_status
+from ai_code2doc.cli.chat_cmd import register as register_chat
 
 register_analyze(app)
 register_serve(app)
 register_query(app)
 register_status(app)
+register_chat(app)
