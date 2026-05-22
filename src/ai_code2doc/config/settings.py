@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 4096
     llm_temperature: float = 0.1
     llm_concurrency: int = 3
+    llm_provider: str = "openai"  # openai / anthropic / ollama
+
+    # Agent / REPL
+    repl_history_size: int = 10
+    repl_save_session: bool = True
+    session_file: str = ".ai_code2doc/session.json"
 
     # Analysis settings
     max_file_size_kb: int = 500
