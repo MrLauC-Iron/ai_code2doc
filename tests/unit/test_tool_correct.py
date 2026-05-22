@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock, patch
 
 from ai_code2doc.agent.tools.correct import tool_definition, execute
 from ai_code2doc.agent.models import ToolCall, ToolResult
@@ -37,7 +37,12 @@ class TestCorrectTool:
         # Mock the LLM client
         mock_llm_result = AsyncMock()
         mock_llm_result.content = "# Overview\nNew accurate content"
-        ctx.llm_client.agenerate.return_value = mock_llm_result
+
+        with patch("ai_code2doc.llm.client.LLMClient") as MockLLM:
+            mock_client = MagicMock()
+            mock_client.agenerate = AsyncMock(return_value=mock_llm_result)
+            MockLLM.return_value = mock_client
+            ctx._llm_client = mock_client
 
         tc = ToolCall(id="c1", name="correct", arguments={
             "target": "layer1/README.md",

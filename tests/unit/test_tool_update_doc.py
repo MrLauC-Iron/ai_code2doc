@@ -27,8 +27,8 @@ class TestUpdateDocTool:
         mock_doc.id = "README"
         mock_gen.generate = AsyncMock(return_value=[mock_doc])
 
-        with patch("ai_code2doc.agent.tools.update_doc.Layer1OverviewGenerator", return_value=mock_gen):
-            with patch("ai_code2doc.agent.tools.update_doc.MarkdownWriter") as MockWriter:
+        with patch("ai_code2doc.generator.layer1_overview.Layer1OverviewGenerator", return_value=mock_gen):
+            with patch("ai_code2doc.generator.markdown_writer.MarkdownWriter") as MockWriter:
                 mock_writer = MagicMock()
                 mock_writer.write_doc = MagicMock(return_value=Path("README.md"))
                 MockWriter.return_value = mock_writer

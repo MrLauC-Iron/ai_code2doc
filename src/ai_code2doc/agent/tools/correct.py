@@ -39,7 +39,7 @@ def execute(call: ToolCall, context) -> ToolResult:
                 f"## Correction instruction\n\n{correction}\n\n"
                 "Return the COMPLETE corrected file content. Do not add explanations."
             )
-            result = asyncio.get_event_loop().run_until_complete(
+            result = asyncio.run(
                 context.llm_client.agenerate(prompt, system="You are a documentation editor.")
             )
             new_content = result.content.strip()

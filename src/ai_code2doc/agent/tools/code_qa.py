@@ -54,7 +54,7 @@ def execute(call: ToolCall, context) -> ToolResult:
                     f"## Question\n\n{question}\n\n"
                     "Provide a concise, well-structured answer in Markdown."
                 )
-                answer = asyncio.get_event_loop().run_until_complete(
+                answer = asyncio.run(
                     context.llm_client.agenerate(prompt, system="You are a helpful code documentation assistant.")
                 )
                 return ToolResult(tool_call_id=call.id, content=answer.content)

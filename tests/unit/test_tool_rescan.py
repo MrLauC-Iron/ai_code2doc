@@ -23,8 +23,8 @@ class TestRescanTool:
         mock_scan = MagicMock()
         mock_scan.target_files = [Path("src/app.py")]
 
-        with patch("ai_code2doc.agent.tools.rescan.ProjectScanner", return_value=mock_scan):
-            with patch("ai_code2doc.agent.tools.rescan.ChangeDetector") as MockDetector:
+        with patch("ai_code2doc.scanner.project_scanner.ProjectScanner", return_value=mock_scan):
+            with patch("ai_code2doc.scanner.change_detector.ChangeDetector") as MockDetector:
                 mock_detector = MagicMock()
                 mock_detector.detect_changes.return_value = ([Path("src/app.py")], [])
                 MockDetector.return_value = mock_detector

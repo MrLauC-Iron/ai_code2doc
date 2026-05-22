@@ -32,7 +32,7 @@ def execute(call: ToolCall, context) -> ToolResult:
             from ai_code2doc.generator.layer1_overview import Layer1OverviewGenerator
             from ai_code2doc.generator.markdown_writer import MarkdownWriter
             gen = Layer1OverviewGenerator(context.settings)
-            docs = asyncio.get_event_loop().run_until_complete(
+            docs = asyncio.run(
                 gen.generate(context.project_root, output_dir, use_llm=bool(context.settings.llm_api_key), changed_files=None)
             )
             writer = MarkdownWriter()
@@ -47,7 +47,7 @@ def execute(call: ToolCall, context) -> ToolResult:
             from ai_code2doc.generator.layer2_modules import Layer2ModuleGenerator
             from ai_code2doc.generator.markdown_writer import MarkdownWriter
             gen = Layer2ModuleGenerator(context.settings)
-            docs = asyncio.get_event_loop().run_until_complete(
+            docs = asyncio.run(
                 gen.generate(context.project_root, output_dir, use_llm=bool(context.settings.llm_api_key), changed_files=None)
             )
             writer = MarkdownWriter()
@@ -67,7 +67,7 @@ def execute(call: ToolCall, context) -> ToolResult:
             from ai_code2doc.generator.layer3_graph import Layer3GraphGenerator
             from ai_code2doc.generator.markdown_writer import MarkdownWriter
             gen = Layer3GraphGenerator(context.settings)
-            docs = asyncio.get_event_loop().run_until_complete(
+            docs = asyncio.run(
                 gen.generate(context.project_root, output_dir, use_llm=bool(context.settings.llm_api_key), changed_files=None)
             )
             writer = MarkdownWriter()
