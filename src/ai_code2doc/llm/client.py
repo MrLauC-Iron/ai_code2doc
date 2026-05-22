@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from dataclasses import dataclass, field
 
 from openai import OpenAI, AsyncOpenAI
@@ -97,57 +96,17 @@ class LLMClient:
         tools: list | None = None,
         system: str = "",
     ) -> tuple[str, list]:
-        """Async generation with tool-use support.
-
-        Args:
-            messages: List of ConversationMessage objects.
-            tools: List of ToolDefinition objects.
-            system: Optional system prompt override.
-
-        Returns:
-            Tuple of (content, tool_calls) where tool_calls is a list of
-            ai_code2doc.agent.models.ToolCall objects.
-        """
-        from ai_code2doc.agent.models import ToolCall
+        from ai_code2doc.llm.provider import create_provider
 
         async with self._semaphore:
-            api_messages = []
-            if system:
-                api_messages.append({"role": "system", "content": system})
-            for msg in messages:
-                api_messages.extend(msg.to_openai_messages())
-
-            kwargs: dict = {
-                "model": self._settings.llm_model,
-                "messages": api_messages,
-                "max_tokens": self._settings.llm_max_tokens,
-                "temperature": self._settings.llm_temperature,
-            }
-            if tools:
-                kwargs["tools"] = [t.to_openai_schema() for t in tools]
-
-            response = await self._async_client.chat.completions.create(**kwargs)
-
-            choice = response.choices[0]
-            usage = response.usage
-
-            if usage:
-                self._tracker.add(usage.prompt_tokens, usage.completion_tokens)
-
-            content = choice.message.content or ""
-            raw_tool_calls = choice.message.tool_calls
-
-            tool_calls_list: list[ToolCall] = []
-            if raw_tool_calls:
-                for tc in raw_tool_calls:
-                    args = {}
-                    if tc.function.arguments:
-                        try:
-                            args = json.loads(tc.function.arguments)
-                        except json.JSONDecodeError:
-                            args = {"raw_arguments": tc.function.arguments}
-                    tool_calls_list.append(
-                        ToolCall(id=tc.id, name=tc.function.name, arguments=args)
-                    )
-
-            return content, tool_calls_list
+            provider = create_provider(self._settings)
+            content, tool_calls = await provider.generate_with_tools(
+                messages=messages,
+                tools=tools,
+                system=system,
+                model=self._settings.llm_model,
+                max_tokens=self._settings.llm_max_tokens,
+                temperature=self._settings.llm_temperature,
+            )
+            self._tracker.add(0, 0)
+            return content, tool_calls

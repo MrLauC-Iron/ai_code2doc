@@ -43,6 +43,7 @@ class TestLLMClientToolUse:
         messages = [ConversationMessage(role=MessageRole.USER, content="what is foo?")]
 
         settings_mock = MagicMock()
+        settings_mock.llm_provider = "openai"
         settings_mock.llm_model = "gpt-4o"
         settings_mock.llm_max_tokens = 4096
         settings_mock.llm_temperature = 0.1
@@ -50,7 +51,7 @@ class TestLLMClientToolUse:
         settings_mock.llm_api_key = "test"
         settings_mock.llm_concurrency = 3
 
-        with patch("ai_code2doc.llm.client.AsyncOpenAI") as mock_async_openai:
+        with patch("ai_code2doc.llm.providers.openai_provider.AsyncOpenAI") as mock_async_openai:
             mock_client = AsyncMock()
             mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
             mock_async_openai.return_value = mock_client
@@ -88,6 +89,7 @@ class TestLLMClientToolUse:
         ]
 
         settings_mock = MagicMock()
+        settings_mock.llm_provider = "openai"
         settings_mock.llm_model = "gpt-4o"
         settings_mock.llm_max_tokens = 4096
         settings_mock.llm_temperature = 0.1
@@ -95,7 +97,7 @@ class TestLLMClientToolUse:
         settings_mock.llm_api_key = "test"
         settings_mock.llm_concurrency = 3
 
-        with patch("ai_code2doc.llm.client.AsyncOpenAI") as mock_async_openai:
+        with patch("ai_code2doc.llm.providers.openai_provider.AsyncOpenAI") as mock_async_openai:
             mock_client = AsyncMock()
             mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
             mock_async_openai.return_value = mock_client
