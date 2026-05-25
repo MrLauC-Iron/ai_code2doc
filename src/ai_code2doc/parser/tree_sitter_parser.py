@@ -80,6 +80,7 @@ class TreeSitterParser(BaseParser):
             imports=imports,
             exports=exports,
             file_hash=compute_file_hash(file_path),
+            source_text=content,
         )
 
     def supported_extensions(self) -> list[str]:

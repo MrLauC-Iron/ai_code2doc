@@ -23,24 +23,19 @@ class TestCallGraphEndToEnd:
         for f in scan_result.target_files:
             try:
                 fi = parser.parse_file(f, sample_py_project)
-                # TreeSitterParser does not populate source_text; set it manually
-                fi.source_text = f.read_text(encoding="utf-8")
                 file_infos.append(fi)
             except Exception:
                 continue
 
         assert len(file_infos) > 0
 
-        # All file_infos should have source_text
+        # All file_infos should have source_text populated by the parser
         for fi in file_infos:
             assert fi.source_text, f"No source_text for {fi.path}"
 
         # Build call graph
         call_builder = CallGraphBuilder(sample_py_project)
         call_sites = call_builder.build_for_files(file_infos)
-
-        # Should find at least some call sites in a real project
-        assert len(call_sites) >= 0  # may be 0 for minimal fixtures
 
         # Build dependency graph with call edges
         dep_builder = DependencyGraphBuilder(sample_py_project)
@@ -49,15 +44,9 @@ class TestCallGraphEndToEnd:
         dep_builder.add_call_edges(call_sites)
         graph = dep_builder.build()
 
-        # Graph should have both file and symbol nodes
+        # Graph should have file nodes
         node_kinds = [graph.nodes[n].get("kind", "file") for n in graph.nodes]
         assert "file" in node_kinds
-
-        # File-level import edges should still exist
-        import_edges = [
-            (u, v) for u, v, d in graph.edges(data=True)
-            if d.get("edge_type") == "import"
-        ]
 
         # Call edges should exist if call sites were found
         if call_sites:
@@ -94,9 +83,7 @@ class TestCallGraphEndToEnd:
 
         parser = TreeSitterParser()
         fi_a = parser.parse_file(a_py, tmp_path)
-        fi_a.source_text = a_py.read_text(encoding="utf-8")
         fi_b = parser.parse_file(b_py, tmp_path)
-        fi_b.source_text = b_py.read_text(encoding="utf-8")
 
         call_builder = CallGraphBuilder(tmp_path)
         call_sites = call_builder.build_for_files([fi_a, fi_b])
@@ -126,13 +113,11 @@ class TestCallGraphEndToEnd:
 
         parser = TreeSitterParser()
         fi = parser.parse_file(service_py, tmp_path)
-        fi.source_text = service_py.read_text(encoding="utf-8")
 
         call_builder = CallGraphBuilder(tmp_path)
         call_sites = call_builder.build_for_files([fi])
 
         # Should find self.validate() call in authenticate()
-        # Method FQNs use dot notation: file::ClassName.method
         auth_calls = [s for s in call_sites if ".authenticate" in s.caller_fqn]
         assert any("validate" in s.callee_name for s in auth_calls)
 
@@ -157,9 +142,7 @@ class TestCallGraphEndToEnd:
 
         parser = TreeSitterParser()
         fi_a = parser.parse_file(a_py, tmp_path)
-        fi_a.source_text = a_py.read_text(encoding="utf-8")
         fi_b = parser.parse_file(b_py, tmp_path)
-        fi_b.source_text = b_py.read_text(encoding="utf-8")
 
         call_builder = CallGraphBuilder(tmp_path)
         call_sites = call_builder.build_for_files([fi_a, fi_b])
