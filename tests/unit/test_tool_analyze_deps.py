@@ -38,3 +38,42 @@ class TestAnalyzeDepsTool:
             tc = ToolCall(id="c1", name="analyze_deps", arguments={"target": "a", "mode": "impact"})
             result = execute(tc, ctx)
             assert "a" in result.content
+
+    def test_execute_callers_mode(self, tmp_path: Path) -> None:
+        import networkx as nx
+        g = nx.DiGraph()
+        g.add_node("a.py::f", kind="symbol")
+        g.add_node("a.py::g", kind="symbol")
+        g.add_edge("a.py::f", "a.py::g", edge_type="call", confidence=0.9, line_number=5)
+        ctx = AgentContext(project_root=tmp_path, settings=MagicMock())
+        with patch("ai_code2doc.agent.tools.analyze_deps._build_graph", return_value=g):
+            tc = ToolCall(id="c1", name="analyze_deps", arguments={"target": "a.py::g", "mode": "callers"})
+            result = execute(tc, ctx)
+            assert not result.is_error
+            assert "a.py::f" in result.content
+
+    def test_execute_callees_mode(self, tmp_path: Path) -> None:
+        import networkx as nx
+        g = nx.DiGraph()
+        g.add_node("a.py::f", kind="symbol")
+        g.add_node("a.py::g", kind="symbol")
+        g.add_edge("a.py::f", "a.py::g", edge_type="call", confidence=0.9, line_number=5)
+        ctx = AgentContext(project_root=tmp_path, settings=MagicMock())
+        with patch("ai_code2doc.agent.tools.analyze_deps._build_graph", return_value=g):
+            tc = ToolCall(id="c1", name="analyze_deps", arguments={"target": "a.py::f", "mode": "callees"})
+            result = execute(tc, ctx)
+            assert not result.is_error
+            assert "a.py::g" in result.content
+
+    def test_execute_hotspots_mode(self, tmp_path: Path) -> None:
+        import networkx as nx
+        g = nx.DiGraph()
+        g.add_edge("a::f", "a::g", edge_type="call")
+        g.add_edge("a::h", "a::g", edge_type="call")
+        g.add_edge("a::f", "a::h", edge_type="call")
+        ctx = AgentContext(project_root=tmp_path, settings=MagicMock())
+        with patch("ai_code2doc.agent.tools.analyze_deps._build_graph", return_value=g):
+            tc = ToolCall(id="c1", name="analyze_deps", arguments={"mode": "hotspots"})
+            result = execute(tc, ctx)
+            assert not result.is_error
+            assert "hotspot" in result.content.lower() or "a::g" in result.content
