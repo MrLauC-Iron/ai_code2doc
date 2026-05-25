@@ -7,7 +7,7 @@ from pathlib import Path
 import networkx as nx
 
 from ai_code2doc.models.module import FileInfo, ModuleSummary
-from ai_code2doc.models.graph import DependencyEdge, CallChain, ImpactHint, CycleInfo
+from ai_code2doc.models.graph import CallSite, DependencyEdge, CallChain, ImpactHint, CycleInfo
 from ai_code2doc.parser.language_registry import LanguageRegistry
 
 
@@ -40,6 +40,35 @@ class DependencyGraphBuilder:
                 target = str(resolved).replace("\\", "/")
                 self.graph.add_node(target)
                 self.graph.add_edge(source, target, weight=1, edge_type="import")
+
+    def add_call_edges(self, call_sites: list[CallSite]) -> None:
+        """Add call edges to the graph for each resolved call site."""
+        for site in call_sites:
+            caller_fqn = site.caller_fqn
+            caller_file = site.file_path
+
+            # Add caller symbol node and "contains" edge from file to caller.
+            self.graph.add_node(caller_fqn, kind="symbol")
+            self.graph.add_node(caller_file)
+            self.graph.add_edge(caller_file, caller_fqn, edge_type="contains")
+
+            if site.callee_fqn is not None:
+                callee_fqn = site.callee_fqn
+                callee_file = callee_fqn.split("::")[0]
+
+                # Add callee symbol node and "contains" edge.
+                self.graph.add_node(callee_fqn, kind="symbol")
+                self.graph.add_node(callee_file)
+                self.graph.add_edge(callee_file, callee_fqn, edge_type="contains")
+
+                # Add call edge from caller to callee.
+                self.graph.add_edge(
+                    caller_fqn,
+                    callee_fqn,
+                    edge_type="call",
+                    confidence=site.confidence,
+                    line_number=site.line_number,
+                )
 
     def build(self) -> nx.DiGraph:
         """Return the fully constructed dependency graph."""
