@@ -3,7 +3,14 @@
 from __future__ import annotations
 
 from ai_code2doc.models.analysis_state import AnalysisState, FileState
-from ai_code2doc.models.graph import CallChain, CycleInfo, DependencyEdge, ImpactHint
+from ai_code2doc.models.graph import (
+    CallChain,
+    CallSite,
+    CycleInfo,
+    DependencyEdge,
+    ImpactHint,
+    SymbolDefinition,
+)
 from ai_code2doc.models.knowledge import KnowledgeDocument
 from ai_code2doc.models.module import (
     ClassInfo,
@@ -29,6 +36,8 @@ __all__ = [
     # graph
     "DependencyEdge",
     "CallChain",
+    "CallSite",
+    "SymbolDefinition",
     "ImpactHint",
     "CycleInfo",
     # knowledge
