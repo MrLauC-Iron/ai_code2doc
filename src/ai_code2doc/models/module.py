@@ -76,6 +76,7 @@ class FileInfo(BaseModel):
     imports: list[ImportInfo] = Field(default_factory=list)
     exports: list[str] = Field(default_factory=list)
     file_hash: str = ""
+    source_text: str = ""
 
 
 class ModuleSummary(BaseModel):
