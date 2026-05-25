@@ -26,6 +26,7 @@ from ai_code2doc.scanner.project_scanner import ProjectScanner
 
 if TYPE_CHECKING:
     from ai_code2doc.models.build import CMakeProjectInfo
+    from ai_code2doc.models.graph import CallSite
 
 logger = logging.getLogger(__name__)
 
@@ -87,9 +88,16 @@ class Layer3GraphGenerator(BaseGenerator):
         graph_builder = DependencyGraphBuilder(project_root)
         for fi in file_infos:
             graph_builder.add_file(fi)
+
+        # 3b. Build call graph
+        from ai_code2doc.analyzer.call_graph_builder import CallGraphBuilder
+
+        call_builder = CallGraphBuilder(project_root)
+        call_sites = call_builder.build_for_files(file_infos)
+        graph_builder.add_call_edges(call_sites)
         graph = graph_builder.build()
 
-        # 3b. Parse CMake build info if available
+        # 3c. Parse CMake build info if available
         cmake_info: CMakeProjectInfo | None = None
         if (project_root / "CMakeLists.txt").is_file():
             from ai_code2doc.parser.build.cmake_parser import CMakeParser
@@ -115,6 +123,18 @@ class Layer3GraphGenerator(BaseGenerator):
         # Top coupling modules by out-degree (most dependencies)
         most_coupled = sorted(out_degrees.items(), key=lambda x: x[1], reverse=True)[:10]
 
+        # 5b. Call graph metrics
+        call_edges = [(u, v) for u, v, d in graph.edges(data=True) if d.get("edge_type") == "call"]
+        call_node_count = sum(1 for n in graph.nodes if graph.nodes[n].get("kind") == "symbol")
+        resolved_calls = sum(1 for s in call_sites if s.callee_fqn is not None)
+
+        # Hotspot analysis: most-called symbols
+        caller_counts: dict[str, int] = {}
+        for u, v, d in graph.edges(data=True):
+            if d.get("edge_type") == "call":
+                caller_counts[v] = caller_counts.get(v, 0) + 1
+        hotspots = sorted(caller_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+
         # 6. Detect cycles
         cycles = graph_builder.detect_cycles()
 
@@ -136,6 +156,10 @@ class Layer3GraphGenerator(BaseGenerator):
             cycles=cycles,
             impacts=impacts,
             project_metrics=project_metrics,
+            call_node_count=call_node_count,
+            call_sites=call_sites,
+            resolved_calls=resolved_calls,
+            hotspots=hotspots,
         )
 
         # 10. Format cycles text
@@ -160,6 +184,10 @@ class Layer3GraphGenerator(BaseGenerator):
                 edge_count=edge_count,
                 metrics_text=metrics_text,
                 cmake_info=cmake_info,
+                call_sites=call_sites,
+                hotspots=hotspots,
+                resolved_calls=resolved_calls,
+                call_node_count=call_node_count,
             )
 
         # 12. Assemble the knowledge document
@@ -171,9 +199,11 @@ class Layer3GraphGenerator(BaseGenerator):
             content=content,
             summary=(
                 f"Dependency graph with {node_count} nodes, {edge_count} edges, "
-                f"{len(cycles)} cycle(s) detected."
+                f"{len(cycles)} cycle(s) detected. "
+                f"Call graph: {call_node_count} symbol nodes, "
+                f"{len(call_sites)} call sites, {resolved_calls} resolved."
             ),
-            tags=["layer3", "dependency-graph", "architecture"],
+            tags=["layer3", "dependency-graph", "architecture", "call-graph"],
             created_at=datetime.now(),
             updated_at=datetime.now(),
             metadata={
@@ -182,6 +212,10 @@ class Layer3GraphGenerator(BaseGenerator):
                 "cycle_count": len(cycles),
                 "most_depended": [(n, d) for n, d in most_depended[:5]],
                 "most_coupled": [(n, d) for n, d in most_coupled[:5]],
+                "call_node_count": call_node_count,
+                "call_site_count": len(call_sites),
+                "resolved_call_count": resolved_calls,
+                "hotspots": hotspots[:5],
             },
         )
 
@@ -218,6 +252,10 @@ class Layer3GraphGenerator(BaseGenerator):
         cycles: list,
         impacts: list,
         project_metrics: object,
+        call_node_count: int = 0,
+        call_sites: list[CallSite] | None = None,
+        resolved_calls: int = 0,
+        hotspots: list[tuple[str, int]] | None = None,
     ) -> str:
         """Format graph metrics as readable text for LLM prompts."""
         parts: list[str] = [
@@ -251,6 +289,18 @@ class Layer3GraphGenerator(BaseGenerator):
             f"total lines: {project_metrics.total_lines}"
         )
 
+        # Call graph metrics
+        if call_sites is not None:
+            parts.append("")
+            parts.append(f"Call graph nodes (symbols): {call_node_count}")
+            parts.append(f"Call sites: {len(call_sites)}")
+            parts.append(f"Resolved calls: {resolved_calls}")
+            if hotspots:
+                parts.append("")
+                parts.append("Most-called symbols (hotspots):")
+                for sym, count in hotspots[:10]:
+                    parts.append(f"  - {sym} (called {count} times)")
+
         return "\n".join(parts)
 
     def _build_static_content(
@@ -265,6 +315,10 @@ class Layer3GraphGenerator(BaseGenerator):
         edge_count: int,
         metrics_text: str,
         cmake_info: CMakeProjectInfo | None = None,
+        call_sites: list[CallSite] | None = None,
+        hotspots: list[tuple[str, int]] | None = None,
+        resolved_calls: int = 0,
+        call_node_count: int = 0,
     ) -> str:
         """Build a purely static dependency graph analysis document."""
         sections: list[str] = []
@@ -390,6 +444,47 @@ class Layer3GraphGenerator(BaseGenerator):
                 )
 
             sections.append("\n\n".join(cmake_sections))
+
+        # Call graph section
+        if call_sites:
+            call_sections = ["## Call Graph Analysis\n\n"]
+            call_sections.append(
+                f"The call graph contains **{call_node_count}** symbol nodes and "
+                f"**{len(call_sites)}** call sites, **{resolved_calls}** of which "
+                f"were resolved to specific definitions.\n"
+            )
+
+            if hotspots:
+                rows = ["| Symbol | Call Count |", "|--------|------------|"]
+                for sym, count in hotspots:
+                    rows.append(f"| `{sym}` | {count} |")
+                call_sections.append(
+                    "### Most-Called Symbols (Hotspots)\n\n"
+                    "These functions/methods are called most frequently:\n\n"
+                    + "\n".join(rows)
+                )
+
+            # Cross-module call interface table
+            cross_module_calls = [
+                s for s in call_sites
+                if s.callee_fqn and "::" in s.callee_fqn
+                and s.caller_fqn.split("::")[0] != s.callee_fqn.split("::")[0]
+            ]
+            if cross_module_calls:
+                rows = ["| Caller | Callee | Confidence | Line |",
+                         "|--------|--------|------------|------|"]
+                for s in cross_module_calls[:20]:
+                    rows.append(
+                        f"| `{s.caller_fqn}` | `{s.callee_fqn}` | "
+                        f"{s.confidence:.0%} | {s.line_number} |"
+                    )
+                call_sections.append(
+                    "### Cross-Module Calls\n\n"
+                    "Calls that cross file boundaries:\n\n"
+                    + "\n".join(rows)
+                )
+
+            sections.append("\n\n".join(call_sections))
 
         return "\n\n".join(sections)
 
