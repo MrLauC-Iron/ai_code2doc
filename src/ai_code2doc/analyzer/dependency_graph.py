@@ -21,7 +21,7 @@ class DependencyGraphBuilder:
 
     def add_file(self, file_info: FileInfo) -> None:
         """Add a file and its imports to the graph."""
-        source = str(file_info.path)
+        source = str(file_info.path).replace("\\", "/")
         self.graph.add_node(source)
 
         # Determine the file extension to pick the right resolver.
