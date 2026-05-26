@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ai_code2doc.models.graph import CallSite, SymbolDefinition
 from ai_code2doc.models.module import FileInfo
+
+if TYPE_CHECKING:
+    from ai_code2doc.analyzer.type_inferrer import TypeScope
 
 
 class SymbolRegistry:
@@ -180,11 +184,13 @@ class SymbolRegistry:
         self,
         site: CallSite,
         caller_file: str,
+        type_scope: TypeScope | None = None,
     ) -> CallSite:
-        """Resolve a :class:`CallSite` using a 5-strategy cascade.
+        """Resolve a :class:`CallSite` using a 6-strategy cascade.
 
         Resolution strategies (in priority order):
 
+        0. **Type-scope-aware** -- use inferred variable types (confidence 0.80-0.90)
         1. **self.X / cls.X** -- method on the same class (confidence 0.95)
         2. **obj.method()** -- look up method on a known class (confidence 0.85-0.90)
         3. **module.func()** -- import-map resolution (confidence 0.95)
@@ -194,6 +200,34 @@ class SymbolRegistry:
         If no strategy matches the fallback is unresolved (confidence 0.30).
         """
         callee_name = site.callee_name
+
+        # --- Strategy 0: Type-scope-aware resolution --------------------
+        if type_scope is not None and "." in callee_name:
+            obj_name, method_name = callee_name.split(".", 1)
+            inferred_type = type_scope.lookup(obj_name)
+            if inferred_type is not None:
+                # Look up the inferred type in the symbol registry
+                type_syms = self.get_by_name(inferred_type)
+                for sym in type_syms:
+                    if sym.kind == "class":
+                        target_fqn = f"{sym.fqn}.{method_name}"
+                        method_sym = self.get_by_fqn(target_fqn)
+                        if method_sym is not None:
+                            return site.model_copy(
+                                update={"callee_fqn": method_sym.fqn, "confidence": 0.90}
+                            )
+                    elif sym.kind == "function":
+                        # type is actually a function, not a class
+                        if method_name == sym.name:
+                            return site.model_copy(
+                                update={"callee_fqn": sym.fqn, "confidence": 0.85}
+                            )
+                # Also try: the inferred type IS a class and callee is its constructor
+                for sym in type_syms:
+                    if sym.kind == "class" and sym.name == method_name:
+                        return site.model_copy(
+                            update={"callee_fqn": sym.fqn, "confidence": 0.80}
+                        )
 
         # --- Strategy 1: self.X / cls.X --------------------------------
         if callee_name.startswith("self.") or callee_name.startswith("cls."):

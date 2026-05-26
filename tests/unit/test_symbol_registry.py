@@ -253,6 +253,34 @@ class TestSymbolRegistry:
         resolved = reg.resolve_call_site(site, "a.py")
         assert resolved.callee_fqn is not None
 
+    def test_resolve_with_type_scope(self) -> None:
+        """Variable type inference should resolve parser.parse_file."""
+        from ai_code2doc.analyzer.type_inferrer import TypeScope
+        reg = SymbolRegistry()
+        reg.add(SymbolDefinition(
+            fqn="src/parser.py::TreeSitterParser",
+            name="TreeSitterParser", file_path="src/parser.py",
+            start_line=1, end_line=30, kind="class",
+        ))
+        reg.add(SymbolDefinition(
+            fqn="src/parser.py::TreeSitterParser.parse_file",
+            name="parse_file", file_path="src/parser.py",
+            start_line=50, end_line=80, kind="method",
+        ))
+        reg.add(SymbolDefinition(
+            fqn="src/main.py::main", name="main",
+            file_path="src/main.py", start_line=1, end_line=10, kind="function",
+        ))
+        scope = TypeScope()
+        scope.set("parser", "TreeSitterParser")
+        site = CallSite(
+            caller_fqn="src/main.py::main", callee_name="parser.parse_file",
+            file_path="src/main.py", line_number=3, call_type="method",
+        )
+        resolved = reg.resolve_call_site(site, "src/main.py", type_scope=scope)
+        assert resolved.callee_fqn is not None
+        assert "parse_file" in resolved.callee_fqn
+
     def test_resolve_call_site_unresolved(self) -> None:
         reg = SymbolRegistry()
         site = CallSite(
