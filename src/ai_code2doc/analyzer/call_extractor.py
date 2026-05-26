@@ -196,6 +196,14 @@ def _walk_for_calls(node: Node, results: list[CallSite], caller_fqn: str, file_p
                     _walk_for_calls(child, results, caller_fqn, file_path)
             return
 
+        # Skip known external library calls (stdlib, mocks, third-party).
+        from ai_code2doc.analyzer.external_libs import is_external_call
+        if is_external_call(callee_name, file_path):
+            # Still need to recurse into children for nested calls.
+            for child in node.children:
+                _walk_for_calls(child, results, caller_fqn, file_path)
+            return
+
         # For super_call pattern, the callee_name is like "super().__init__"
         # which includes "super()". Clean it up.
         if call_type == "super_call":
