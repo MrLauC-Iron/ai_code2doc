@@ -9,7 +9,7 @@ analysis for critical modules, and coupling metrics.  When *use_llm* is
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -226,6 +226,88 @@ class Layer3GraphGenerator(BaseGenerator):
         # Also write the raw Mermaid diagram as a separate file
         mermaid_path = output_dir / "layer3" / "dependency-graph.mmd"
         self._writer.write_raw(mermaid_path, mermaid_graph)
+
+        # 14. Export to SQLite + JSON + module embeddings
+        try:
+            from ai_code2doc.analyzer.dependency_store import DependencyStore
+            from ai_code2doc.utils.hashing import compute_file_hash
+
+            db_path = output_dir / "layer3" / "dependency-graph.db"
+            store = DependencyStore(db_path)
+
+            # Compute file hashes for incremental tracking
+            current_hashes: dict[str, str] = {}
+            for fi in file_infos:
+                fp = str(fi.path).replace("\\", "/")
+                try:
+                    h = compute_file_hash(fi.path)
+                    current_hashes[fp] = h
+                except Exception:
+                    current_hashes[fp] = ""
+
+            # Full rebuild on first run, incremental after
+            if not store.get_metadata("version"):
+                store._conn.execute("DELETE FROM edges")
+                store._conn.execute("DELETE FROM nodes")
+
+            # Write file nodes
+            for fi in file_infos:
+                fp = str(fi.path).replace("\\", "/")
+                store.upsert_node(
+                    id=fp, path=fp, name=fi.name,
+                    kind="file", file_hash=current_hashes.get(fp),
+                )
+
+            # Write import edges and call edges from NetworkX graph
+            for u, v, d in graph.edges(data=True):
+                edge_type = d.get("edge_type", "import")
+                conf = d.get("confidence", 1.0)
+                line_num = d.get("line_number")
+                weight = d.get("weight", 1)
+
+                # Ensure source node exists
+                if store.get_node(u) is None:
+                    u_name = u.rsplit("/", 1)[-1].split("::")[-1] if "::" in u else u.rsplit("/", 1)[-1]
+                    u_kind = "symbol" if "::" in u else "file"
+                    u_path = u.split("::")[0] if "::" in u else u
+                    store.upsert_node(id=u, path=u_path, name=u_name, kind=u_kind)
+
+                # Ensure target node exists
+                if store.get_node(v) is None:
+                    v_name = v.rsplit("/", 1)[-1].split("::")[-1] if "::" in v else v.rsplit("/", 1)[-1]
+                    v_kind = "symbol" if "::" in v else "file"
+                    v_path = v.split("::")[0] if "::" in v else v
+                    store.upsert_node(id=v, path=v_path, name=v_name, kind=v_kind)
+
+                store.upsert_edge(
+                    source_id=u, target_id=v, edge_type=edge_type,
+                    confidence=conf, weight=weight, line_number=line_num,
+                )
+
+            store.commit()
+            store.set_metadata("version", "2.0")
+            store.set_metadata("generated_at", datetime.now(timezone.utc).isoformat())
+
+            # 15. Export JSON
+            json_path = output_dir / "layer3" / "dependency-graph.json"
+            store.export_json(json_path)
+
+            # 16. Generate and store module-level embeddings
+            try:
+                from ai_code2doc.vector_store.store import VectorStore
+                vs = VectorStore(self._settings)
+                summaries = DependencyStore.generate_module_summaries(store)
+                vs.add_module_summaries(summaries)
+            except Exception as emb_exc:
+                logger.warning("Module embedding generation failed: %s", emb_exc)
+
+            store.close()
+            logger.info(
+                "Layer 3 exported: SQLite (%s), JSON (%s)",
+                db_path, json_path,
+            )
+        except Exception as exc:
+            logger.warning("Layer 3 structured export failed: %s", exc)
 
         return [doc]
 
