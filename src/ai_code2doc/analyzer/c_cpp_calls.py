@@ -194,6 +194,12 @@ def _walk_for_calls(
                     _walk_for_calls(child, source, caller_fqn, file_path, results, known_macros)
                 return
 
+            # Skip calls to known external namespaces (std::, __gnu_cxx::).
+            if callee_name.startswith("std::") or callee_name.startswith("__gnu_cxx::"):
+                for child in node.children:
+                    _walk_for_calls(child, source, caller_fqn, file_path, results, known_macros)
+                return
+
             call_type = _classify_call(func_node)
             line_number = node.start_point[0] + 1  # 1-indexed
 

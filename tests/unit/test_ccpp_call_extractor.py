@@ -45,10 +45,10 @@ class TestCCppCallExtractor:
         assert any("process" in s.callee_name for s in sites)
 
     def test_qualified_call(self) -> None:
-        """A namespace-qualified call like std::sort(...) is extracted."""
+        """A project-internal namespace-qualified call like mylib::sort(...) is extracted."""
         source = (
             "void sort_data(int* arr, int n) {\n"
-            "    std::sort(arr, arr + n);\n"
+            "    mylib::sort(arr, arr + n);\n"
             "}\n"
         )
         sites = CCppCallExtractor.extract_calls(source, "sort_data", "util.cpp")
@@ -161,6 +161,17 @@ class TestCCppCallExtractor:
         names = [s.callee_name for s in sites]
         assert "CV_Assert" not in names
         assert "CV_Error" not in names
+
+    def test_skip_std_namespace_calls(self) -> None:
+        """Calls to std:: and __gnu_cxx:: namespaces are filtered out."""
+        source = (
+            "void sort_data(int* arr, int n) {\n"
+            "    std::sort(arr, arr + n);\n"
+            "}\n"
+        )
+        sites = CCppCallExtractor.extract_calls(source, "sort_data", "util.cpp")
+        names = [s.callee_name for s in sites]
+        assert not any(n.startswith("std::") for n in names)
 
     def test_macro_collection(self) -> None:
         """collect_macro_names extracts function-like macro definitions."""
