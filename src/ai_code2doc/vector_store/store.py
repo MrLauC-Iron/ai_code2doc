@@ -86,6 +86,46 @@ class VectorStore:
             total=len(search_results),
         )
 
+    def add_module_summaries(self, summaries: list[dict]) -> None:
+        """Add module-level dependency summaries to a dedicated collection."""
+        if not summaries:
+            return
+        collection = self._client.get_or_create_collection(
+            name="dependency_modules",
+            metadata={"description": "Module-level dependency summaries for Layer 3"},
+        )
+        ids = [s["id"] for s in summaries]
+        texts = [s["content"] for s in summaries]
+        metas = [s["metadata"] for s in summaries]
+        embeddings = self._embedder.embed(texts)
+        collection.delete(ids=ids)
+        collection.upsert(
+            ids=ids, documents=texts, embeddings=embeddings, metadatas=metas,
+        )
+
+    def search_modules(self, query: str, n_results: int = 5) -> list[dict]:
+        """Search module dependency summaries by semantic similarity."""
+        collection = self._client.get_or_create_collection(
+            name="dependency_modules",
+            metadata={"description": "Module-level dependency summaries for Layer 3"},
+        )
+        query_embedding = self._embedder.embed_single(query)
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=n_results,
+            include=["documents", "metadatas", "distances"],
+        )
+        items = []
+        if results and results["documents"]:
+            for i, doc in enumerate(results["documents"][0]):
+                meta = results["metadatas"][0][i] if results["metadatas"] else {}
+                items.append({
+                    "content": doc or "",
+                    "metadata": meta,
+                    "score": 1.0 - (results["distances"][0][i] if results["distances"] else 0.0),
+                })
+        return items
+
     def _split_documents(self, documents: list[KnowledgeDocument]) -> list[DocumentChunk]:
         """Split documents into chunks suitable for embedding."""
         chunks = []
