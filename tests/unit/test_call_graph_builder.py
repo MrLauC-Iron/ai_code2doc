@@ -88,6 +88,29 @@ class TestCallGraphBuilder:
         add_sites = [s for s in sites if s.callee_name == "add"]
         assert len(add_sites) == 0
 
+    def test_cpp_type_aware_resolution(self, tmp_path: Path) -> None:
+        from ai_code2doc.models.module import FileInfo, FunctionInfo, ClassInfo
+        builder = CallGraphBuilder(tmp_path)
+
+        fi_mat = FileInfo(
+            path=tmp_path / "mat.cpp", name="mat.cpp",
+            classes=[ClassInfo(
+                name="Mat", start_line=1, end_line=20,
+                methods=[FunctionInfo(name="rows", start_line=5, end_line=8)],
+            )],
+        )
+        fi_mat.source_text = "class Mat {\npublic:\n    int rows();\n};\n"
+
+        fi_proc = FileInfo(
+            path=tmp_path / "proc.cpp", name="proc.cpp",
+            functions=[FunctionInfo(name="process", start_line=1, end_line=5)],
+        )
+        fi_proc.source_text = "void process(Mat img) {\n    img.rows();\n}\n"
+
+        sites = builder.build_for_files([fi_mat, fi_proc])
+        resolved = [s for s in sites if s.callee_fqn is not None]
+        assert any("rows" in s.callee_name for s in resolved)
+
     def test_build_no_source_text(self) -> None:
         from ai_code2doc.models.module import FileInfo, FunctionInfo
         builder = CallGraphBuilder(Path("/project"))

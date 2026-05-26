@@ -8,7 +8,7 @@ from typing import Callable
 from ai_code2doc.analyzer.call_extractor import PythonCallExtractor
 from ai_code2doc.analyzer.c_cpp_calls import CCppCallExtractor, _COMMON_CPP_MACROS, collect_macro_names
 from ai_code2doc.analyzer.symbol_registry import SymbolRegistry
-from ai_code2doc.analyzer.type_inferrer import TypeInferrer
+from ai_code2doc.analyzer.type_inferrer import CppTypeInferrer, TypeInferrer
 from ai_code2doc.models.graph import CallSite
 from ai_code2doc.models.module import FileInfo
 
@@ -108,17 +108,25 @@ class CallGraphBuilder:
     def _resolve_sites(self, sites: list[CallSite], fi: FileInfo) -> list[CallSite]:
         """Resolve call site names to FQNs using the registry."""
         file_path = str(fi.path).replace("\\", "/")
-
-        # Build type scope from the source text
         source = getattr(fi, "source_text", None) or ""
         type_scope = None
+
         if source:
             enclosing = None
             if sites:
                 caller_parts = sites[0].caller_fqn.split("::")
                 if len(caller_parts) >= 2 and "." in caller_parts[1]:
                     enclosing = caller_parts[1].split(".")[0]
-            type_scope = TypeInferrer.infer(source, file_path, enclosing_class=enclosing)
+                elif len(caller_parts) >= 2 and "." not in caller_parts[1]:
+                    member = caller_parts[1]
+                    if "::" in member:
+                        enclosing = member.rsplit("::", 1)[0]
+
+            ext = Path(file_path).suffix.lower()
+            if ext in self._CPP_EXTENSIONS:
+                type_scope = CppTypeInferrer.infer(source, file_path, enclosing_class=enclosing)
+            else:
+                type_scope = TypeInferrer.infer(source, file_path, enclosing_class=enclosing)
 
         resolved: list[CallSite] = []
         for site in sites:
