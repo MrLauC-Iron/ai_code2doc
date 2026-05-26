@@ -202,12 +202,27 @@ class SymbolRegistry:
         callee_name = site.callee_name
 
         # --- Strategy 0: Type-scope-aware resolution --------------------
-        if type_scope is not None and "." in callee_name:
-            obj_name, method_name = callee_name.split(".", 1)
-            inferred_type = type_scope.lookup(obj_name)
+        if type_scope is not None and ("." in callee_name or "->" in callee_name):
+            if "->" in callee_name:
+                obj_name, method_name = callee_name.split("->", 1)
+            else:
+                obj_name, method_name = callee_name.split(".", 1)
+
+            # Special case: this->method -> use enclosing class
+            if obj_name == "this" and type_scope.enclosing_class:
+                inferred_type = type_scope.enclosing_class
+            else:
+                inferred_type = type_scope.lookup(obj_name)
+
             if inferred_type is not None:
+                # Strip namespace prefix for lookup
+                if "::" in inferred_type:
+                    stripped = inferred_type.rsplit("::", 1)[-1]
+                else:
+                    stripped = inferred_type
+
                 # Look up the inferred type in the symbol registry
-                type_syms = self.get_by_name(inferred_type)
+                type_syms = self.get_by_name(stripped)
                 for sym in type_syms:
                     if sym.kind == "class":
                         target_fqn = f"{sym.fqn}.{method_name}"

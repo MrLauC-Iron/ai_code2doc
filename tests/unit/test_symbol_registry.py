@@ -281,6 +281,67 @@ class TestSymbolRegistry:
         assert resolved.callee_fqn is not None
         assert "parse_file" in resolved.callee_fqn
 
+    def test_resolve_arrow_method_with_type_scope(self) -> None:
+        from ai_code2doc.analyzer.type_inferrer import TypeScope
+        reg = SymbolRegistry()
+        reg.add(SymbolDefinition(
+            fqn="src/mat.cpp::Mat", name="Mat",
+            file_path="src/mat.cpp", start_line=1, end_line=100, kind="class",
+        ))
+        reg.add(SymbolDefinition(
+            fqn="src/mat.cpp::Mat.rows", name="rows",
+            file_path="src/mat.cpp", start_line=50, end_line=55, kind="method",
+        ))
+        scope = TypeScope()
+        scope.set("ptr", "Mat")
+        site = CallSite(
+            caller_fqn="src/proc.cpp::process", callee_name="ptr->rows",
+            file_path="src/proc.cpp", line_number=3, call_type="method",
+        )
+        resolved = reg.resolve_call_site(site, "src/proc.cpp", type_scope=scope)
+        assert resolved.callee_fqn is not None
+        assert "rows" in resolved.callee_fqn
+
+    def test_resolve_this_arrow_method(self) -> None:
+        from ai_code2doc.analyzer.type_inferrer import TypeScope
+        reg = SymbolRegistry()
+        reg.add(SymbolDefinition(
+            fqn="src/svc.cpp::Service", name="Service",
+            file_path="src/svc.cpp", start_line=1, end_line=50, kind="class",
+        ))
+        reg.add(SymbolDefinition(
+            fqn="src/svc.cpp::Service.validate", name="validate",
+            file_path="src/svc.cpp", start_line=10, end_line=20, kind="method",
+        ))
+        scope = TypeScope(enclosing_class="Service")
+        scope.set("this", "Service")
+        site = CallSite(
+            caller_fqn="src/svc.cpp::Service.process", callee_name="this->validate",
+            file_path="src/svc.cpp", line_number=5, call_type="method",
+        )
+        resolved = reg.resolve_call_site(site, "src/svc.cpp", type_scope=scope)
+        assert resolved.callee_fqn == "src/svc.cpp::Service.validate"
+
+    def test_resolve_namespace_qualified_type(self) -> None:
+        from ai_code2doc.analyzer.type_inferrer import TypeScope
+        reg = SymbolRegistry()
+        reg.add(SymbolDefinition(
+            fqn="src/mat.cpp::Mat", name="Mat",
+            file_path="src/mat.cpp", start_line=1, end_line=100, kind="class",
+        ))
+        reg.add(SymbolDefinition(
+            fqn="src/mat.cpp::Mat.cols", name="cols",
+            file_path="src/mat.cpp", start_line=40, end_line=45, kind="method",
+        ))
+        scope = TypeScope()
+        scope.set("img", "cv::Mat")
+        site = CallSite(
+            caller_fqn="src/proc.cpp::process", callee_name="img.cols",
+            file_path="src/proc.cpp", line_number=3, call_type="method",
+        )
+        resolved = reg.resolve_call_site(site, "src/proc.cpp", type_scope=scope)
+        assert resolved.callee_fqn == "src/mat.cpp::Mat.cols"
+
     def test_resolve_call_site_unresolved(self) -> None:
         reg = SymbolRegistry()
         site = CallSite(
