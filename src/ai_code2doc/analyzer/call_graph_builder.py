@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Callable
 
 from ai_code2doc.analyzer.call_extractor import PythonCallExtractor
+from ai_code2doc.analyzer.c_cpp_calls import CCppCallExtractor
 from ai_code2doc.analyzer.symbol_registry import SymbolRegistry
 from ai_code2doc.analyzer.type_inferrer import TypeInferrer
 from ai_code2doc.models.graph import CallSite
@@ -39,6 +41,21 @@ class CallGraphBuilder:
 
         return all_sites
 
+    _CPP_EXTENSIONS: frozenset[str] = frozenset({
+        ".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".hxx",
+    })
+
+    @staticmethod
+    def _get_extractor(ext: str) -> Callable[[str, str, str], list[CallSite]]:
+        """Return the appropriate ``extract_calls`` callable for *ext*.
+
+        Returns :meth:`CCppCallExtractor.extract_calls` for C/C++ extensions
+        and :meth:`PythonCallExtractor.extract_calls` as the default.
+        """
+        if ext in CallGraphBuilder._CPP_EXTENSIONS:
+            return CCppCallExtractor.extract_calls
+        return PythonCallExtractor.extract_calls
+
     def _extract_from_file(self, fi: FileInfo) -> list[CallSite]:
         """Extract raw call sites from a file's functions and methods."""
         source = getattr(fi, "source_text", None) or ""
@@ -46,6 +63,8 @@ class CallGraphBuilder:
             return []
 
         file_path = str(fi.path).replace("\\", "/")
+        ext = Path(file_path).suffix.lower()
+        extract = self._get_extractor(ext)
         sites: list[CallSite] = []
 
         # Extract calls from top-level functions
@@ -53,7 +72,7 @@ class CallGraphBuilder:
             fqn = f"{file_path}::{func.name}"
             func_source = self._extract_body(source, func.start_line, func.end_line)
             if func_source:
-                func_sites = PythonCallExtractor.extract_calls(func_source, fqn, file_path)
+                func_sites = extract(func_source, fqn, file_path)
                 sites.extend(func_sites)
 
         # Extract calls from class methods
@@ -63,9 +82,7 @@ class CallGraphBuilder:
                 method_fqn = f"{cls_fqn}.{method.name}"
                 method_source = self._extract_body(source, method.start_line, method.end_line)
                 if method_source:
-                    method_sites = PythonCallExtractor.extract_calls(
-                        method_source, method_fqn, file_path,
-                    )
+                    method_sites = extract(method_source, method_fqn, file_path)
                     sites.extend(method_sites)
 
         return sites

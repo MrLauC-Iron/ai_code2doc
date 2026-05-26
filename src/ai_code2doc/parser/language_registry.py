@@ -99,6 +99,12 @@ class LanguageRegistry:
         """Look up an adapter by its ``language_id``."""
         return cls._adapters.get(language_id)
 
+    @staticmethod
+    def get_extension(file_path: str) -> str:
+        """Return the file extension (including dot) for a file path."""
+        p = file_path.rfind(".")
+        return file_path[p:].lower() if p >= 0 else ""
+
     @classmethod
     def all_extensions(cls) -> set[str]:
         """Return the set of all registered file extensions."""

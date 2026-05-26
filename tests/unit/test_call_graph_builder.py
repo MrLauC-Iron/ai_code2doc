@@ -67,6 +67,27 @@ class TestCallGraphBuilder:
         validate_calls = [s for s in sites if "validate" in s.callee_name]
         assert len(validate_calls) >= 1
 
+    def test_ccpp_extraction_dispatch(self, tmp_path: Path) -> None:
+        from ai_code2doc.models.module import FileInfo, FunctionInfo
+        builder = CallGraphBuilder(tmp_path)
+        fi = FileInfo(
+            path=tmp_path / "calc.cpp", name="calc.cpp",
+            functions=[FunctionInfo(name="add", start_line=1, end_line=4)],
+        )
+        fi.source_text = (
+            "int add(int a, int b) {\n"
+            "    int result = compute(a, b);\n"
+            "    return result;\n"
+            "}\n"
+        )
+        sites = builder.build_for_files([fi])
+        compute_sites = [s for s in sites if s.callee_name == "compute"]
+        assert len(compute_sites) >= 1
+        # The C++ extractor should NOT confuse the function definition
+        # "int add(...)" with a call to "add" (Python extractor does this).
+        add_sites = [s for s in sites if s.callee_name == "add"]
+        assert len(add_sites) == 0
+
     def test_build_no_source_text(self) -> None:
         from ai_code2doc.models.module import FileInfo, FunctionInfo
         builder = CallGraphBuilder(Path("/project"))
