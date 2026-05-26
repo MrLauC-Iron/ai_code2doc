@@ -254,7 +254,7 @@ class Layer3GraphGenerator(BaseGenerator):
             for fi in file_infos:
                 fp = str(fi.path).replace("\\", "/")
                 store.upsert_node(
-                    id=fp, path=fp, name=fi.name,
+                    node_id=fp, path=fp, name=fi.name,
                     kind="file", file_hash=current_hashes.get(fp),
                 )
 
@@ -270,14 +270,14 @@ class Layer3GraphGenerator(BaseGenerator):
                     u_name = u.rsplit("/", 1)[-1].split("::")[-1] if "::" in u else u.rsplit("/", 1)[-1]
                     u_kind = "symbol" if "::" in u else "file"
                     u_path = u.split("::")[0] if "::" in u else u
-                    store.upsert_node(id=u, path=u_path, name=u_name, kind=u_kind)
+                    store.upsert_node(node_id=u, path=u_path, name=u_name, kind=u_kind)
 
                 # Ensure target node exists
                 if store.get_node(v) is None:
                     v_name = v.rsplit("/", 1)[-1].split("::")[-1] if "::" in v else v.rsplit("/", 1)[-1]
                     v_kind = "symbol" if "::" in v else "file"
                     v_path = v.split("::")[0] if "::" in v else v
-                    store.upsert_node(id=v, path=v_path, name=v_name, kind=v_kind)
+                    store.upsert_node(node_id=v, path=v_path, name=v_name, kind=v_kind)
 
                 store.upsert_edge(
                     source_id=u, target_id=v, edge_type=edge_type,

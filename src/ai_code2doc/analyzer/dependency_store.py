@@ -33,7 +33,7 @@ class DependencyStore:
                 id         TEXT PRIMARY KEY,
                 path       TEXT,
                 name       TEXT,
-                kind       TEXT NOT NULL CHECK(kind IN ('file','class','function','method')),
+                kind       TEXT NOT NULL CHECK(kind IN ('file','class','function','method','symbol')),
                 file_hash  TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
