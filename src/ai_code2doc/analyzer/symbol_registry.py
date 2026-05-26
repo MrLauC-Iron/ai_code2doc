@@ -133,6 +133,46 @@ class SymbolRegistry:
                 self.add_import(file_path_str, imp.source, imp.source)
 
     # ------------------------------------------------------------------
+    # Module-path conversion
+    # ------------------------------------------------------------------
+
+    def _resolve_module_to_file(self, module_dotted: str) -> list[str]:
+        """Convert a dotted module name to possible file paths.
+
+        Examples:
+            "ai_code2doc.scanner.project_scanner"
+            -> ["ai_code2doc/scanner/project_scanner.py",
+                "ai_code2doc/scanner/project_scanner/__init__.py",
+                "src/ai_code2doc/scanner/project_scanner.py",
+                "src/ai_code2doc/scanner/project_scanner/__init__.py"]
+
+            "src/helpers.py"
+            -> ["src/helpers.py", "src/helpers.py/__init__.py"]
+
+        Always includes the original value as the first candidate so that
+        import maps that already store file paths continue to work.
+        """
+        candidates: list[str] = []
+        # Include the original value as-is (handles file-path imports).
+        candidates.append(module_dotted)
+        parts = module_dotted.split(".")
+        if len(parts) > 1:
+            # Try as a file path: a.b.c -> a/b/c.py
+            file_path = "/".join(parts) + ".py"
+            if file_path not in candidates:
+                candidates.append(file_path)
+            # Try as a package directory: a.b.c -> a/b/c/__init__.py
+            init_path = "/".join(parts) + "/__init__.py"
+            candidates.append(init_path)
+            # Also try with "src/" prefix for project modules.
+            src_file = "src/" + file_path
+            if src_file not in candidates:
+                candidates.append(src_file)
+            src_init = "src/" + init_path
+            candidates.append(src_init)
+        return candidates
+
+    # ------------------------------------------------------------------
     # Call-site resolution (5-strategy cascade)
     # ------------------------------------------------------------------
 
@@ -204,17 +244,26 @@ class SymbolRegistry:
                     )
 
         # --- Strategy 3: module.func() via import map --------------------
-        # callee_name could be "module.func" or just "func" that was imported.
-        # Try splitting on "." first (e.g., "np.array").
         if "." in callee_name:
             maybe_module, maybe_func = callee_name.split(".", 1)
             resolved = self.resolve_import(caller_file, maybe_module)
             if resolved is not None:
-                target_fqn = f"{resolved}::{maybe_func}"
-                if self.get_by_fqn(target_fqn) is not None:
-                    return site.model_copy(
-                        update={"callee_fqn": target_fqn, "confidence": 0.95}
-                    )
+                # Convert dotted module to file paths and search each
+                for candidate_path in self._resolve_module_to_file(resolved):
+                    target_fqn = f"{candidate_path}::{maybe_func}"
+                    sym = self.get_by_fqn(target_fqn)
+                    if sym is not None:
+                        return site.model_copy(
+                            update={"callee_fqn": sym.fqn, "confidence": 0.95}
+                        )
+                # Also try: maybe_func is a class imported directly
+                for sym in self.get_by_name(maybe_func):
+                    if sym.file_path.endswith(
+                        "/__init__.py"
+                    ) or sym.file_path.replace("/", ".").startswith(resolved):
+                        return site.model_copy(
+                            update={"callee_fqn": sym.fqn, "confidence": 0.85}
+                        )
         # Try direct import map lookup for the full callee_name.
         resolved_module = self.resolve_import(caller_file, callee_name)
         if resolved_module is not None:

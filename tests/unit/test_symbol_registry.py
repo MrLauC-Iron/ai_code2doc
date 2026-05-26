@@ -206,6 +206,53 @@ class TestSymbolRegistry:
         assert resolved.callee_fqn == "a.py::MyClass.create"
         assert resolved.confidence == 0.95
 
+    def test_resolve_module_path_dotted_to_file(self) -> None:
+        """Dotted module name should convert to file path for FQN matching."""
+        reg = SymbolRegistry()
+        reg.add(SymbolDefinition(
+            fqn="src/ai_code2doc/scanner/project_scanner.py::scan",
+            name="scan",
+            file_path="src/ai_code2doc/scanner/project_scanner.py",
+            start_line=1, end_line=5, kind="function",
+        ))
+        reg.add(SymbolDefinition(
+            fqn="src/ai_code2doc/scanner/project_scanner.py::ProjectScanner",
+            name="ProjectScanner",
+            file_path="src/ai_code2doc/scanner/project_scanner.py",
+            start_line=10, end_line=20, kind="class",
+        ))
+        # Import map stores dotted name
+        reg.add_import("a.py", "scanner", "ai_code2doc.scanner.project_scanner")
+        # Should resolve by converting dotted to file path
+        site = CallSite(
+            caller_fqn="a.py::main", callee_name="scanner.scan",
+            file_path="a.py", line_number=3, call_type="function",
+        )
+        resolved = reg.resolve_call_site(site, "a.py")
+        assert resolved.callee_fqn is not None
+        assert "scan" in resolved.callee_fqn
+        assert resolved.confidence == 0.95
+
+    def test_resolve_from_import_direct_to_class(self) -> None:
+        reg = SymbolRegistry()
+        reg.add(SymbolDefinition(
+            fqn="src/models.py::FileInfo",
+            name="FileInfo", file_path="src/models.py",
+            start_line=64, end_line=79, kind="class",
+        ))
+        reg.add(SymbolDefinition(
+            fqn="src/models.py::FunctionInfo",
+            name="FunctionInfo", file_path="src/models.py",
+            start_line=10, end_line=22, kind="class",
+        ))
+        reg.add_import("a.py", "FileInfo", "ai_code2doc.models.module")
+        site = CallSite(
+            caller_fqn="a.py::main", callee_name="FileInfo",
+            file_path="a.py", line_number=3, call_type="class_constructor",
+        )
+        resolved = reg.resolve_call_site(site, "a.py")
+        assert resolved.callee_fqn is not None
+
     def test_resolve_call_site_unresolved(self) -> None:
         reg = SymbolRegistry()
         site = CallSite(
