@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Callable
 
 from ai_code2doc.analyzer.call_extractor import PythonCallExtractor
-from ai_code2doc.analyzer.c_cpp_calls import CCppCallExtractor
+from ai_code2doc.analyzer.c_cpp_calls import CCppCallExtractor, _COMMON_CPP_MACROS, collect_macro_names
 from ai_code2doc.analyzer.symbol_registry import SymbolRegistry
 from ai_code2doc.analyzer.type_inferrer import TypeInferrer
 from ai_code2doc.models.graph import CallSite
@@ -19,6 +19,7 @@ class CallGraphBuilder:
     def __init__(self, project_root: Path) -> None:
         self.root = project_root
         self.registry = SymbolRegistry()
+        self._known_macros: set[str] = set(_COMMON_CPP_MACROS)
 
     def build_for_files(self, file_infos: list[FileInfo]) -> list[CallSite]:
         """Extract and resolve call sites across all files.
@@ -28,6 +29,16 @@ class CallGraphBuilder:
         file_infos:
             Parsed FileInfo objects (must have source_text set for call extraction).
         """
+        # Phase 0: Collect function-like macros from C/C++ files
+        for fi in file_infos:
+            ext = Path(str(fi.path)).suffix.lower()
+            if ext in self._CPP_EXTENSIONS:
+                source = getattr(fi, "source_text", None) or ""
+                if source:
+                    self._known_macros.update(
+                        collect_macro_names(source.encode("utf-8"))
+                    )
+
         # Phase 1: Build symbol registry from all definitions
         for fi in file_infos:
             self.registry.add_from_file_info(fi)
@@ -64,6 +75,7 @@ class CallGraphBuilder:
 
         file_path = str(fi.path).replace("\\", "/")
         ext = Path(file_path).suffix.lower()
+        is_cpp = ext in self._CPP_EXTENSIONS
         extract = self._get_extractor(ext)
         sites: list[CallSite] = []
 
@@ -72,7 +84,10 @@ class CallGraphBuilder:
             fqn = f"{file_path}::{func.name}"
             func_source = self._extract_body(source, func.start_line, func.end_line)
             if func_source:
-                func_sites = extract(func_source, fqn, file_path)
+                if is_cpp:
+                    func_sites = extract(func_source, fqn, file_path, known_macros=self._known_macros)
+                else:
+                    func_sites = extract(func_source, fqn, file_path)
                 sites.extend(func_sites)
 
         # Extract calls from class methods
@@ -82,7 +97,10 @@ class CallGraphBuilder:
                 method_fqn = f"{cls_fqn}.{method.name}"
                 method_source = self._extract_body(source, method.start_line, method.end_line)
                 if method_source:
-                    method_sites = extract(method_source, method_fqn, file_path)
+                    if is_cpp:
+                        method_sites = extract(method_source, method_fqn, file_path, known_macros=self._known_macros)
+                    else:
+                        method_sites = extract(method_source, method_fqn, file_path)
                     sites.extend(method_sites)
 
         return sites

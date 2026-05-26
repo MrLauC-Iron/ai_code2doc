@@ -145,3 +145,32 @@ class TestCCppCallExtractor:
         sites = CCppCallExtractor.extract_calls(source, "run", "run.cpp")
         # Two calls to foo on different lines should both appear
         assert len(sites) == 2
+
+    def test_skip_known_macros(self) -> None:
+        """Known function-like macros like CV_Assert(expr) are filtered out."""
+        source = (
+            "void process(Data* data) {\n"
+            "    CV_Assert(data != nullptr);\n"
+            "    CV_Error(0, \"error\");\n"
+            "}\n"
+        )
+        sites = CCppCallExtractor.extract_calls(
+            source, "process", "proc.cpp",
+            known_macros={"CV_Assert", "CV_Error"},
+        )
+        names = [s.callee_name for s in sites]
+        assert "CV_Assert" not in names
+        assert "CV_Error" not in names
+
+    def test_macro_collection(self) -> None:
+        """collect_macro_names extracts function-like macro definitions."""
+        from ai_code2doc.analyzer.c_cpp_calls import collect_macro_names
+        source = (
+            "#define CV_Assert(expr) do { if(!(expr)) ... } while(0)\n"
+            "#define MIN(a,b) ((a)<(b)?(a):(b))\n"
+            "void f() {}\n"
+        )
+        macros = collect_macro_names(source.encode("utf-8"))
+        assert "CV_Assert" in macros
+        assert "MIN" in macros
+        assert "f" not in macros

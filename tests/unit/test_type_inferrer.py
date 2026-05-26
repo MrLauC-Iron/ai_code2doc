@@ -59,3 +59,43 @@ class TestTypeInferrer:
         source = "def process(self):\n    pass\n"
         scopes = TypeInferrer.infer(source, "a.py", enclosing_class="Service")
         assert scopes.lookup("self") == "Service"
+
+
+class TestCppTypeInferrer:
+    """Tests for CppTypeInferrer -- lightweight type inference from C++ declarations."""
+
+    def test_simple_declaration(self) -> None:
+        from ai_code2doc.analyzer.type_inferrer import CppTypeInferrer
+        scope = CppTypeInferrer.infer("void f() {\n    Mat img;\n}\n", "test.cpp")
+        assert scope.lookup("img") == "Mat"
+
+    def test_qualified_type_declaration(self) -> None:
+        from ai_code2doc.analyzer.type_inferrer import CppTypeInferrer
+        scope = CppTypeInferrer.infer("void f() {\n    cv::Mat img;\n}\n", "test.cpp")
+        assert scope.lookup("img") == "Mat"
+
+    def test_pointer_declaration(self) -> None:
+        from ai_code2doc.analyzer.type_inferrer import CppTypeInferrer
+        scope = CppTypeInferrer.infer("void f() {\n    Mat* ptr;\n}\n", "test.cpp")
+        assert scope.lookup("ptr") == "Mat"
+
+    def test_reference_parameter(self) -> None:
+        from ai_code2doc.analyzer.type_inferrer import CppTypeInferrer
+        scope = CppTypeInferrer.infer("void f(Mat& ref) {\n}\n", "test.cpp")
+        assert scope.lookup("ref") == "Mat"
+
+    def test_auto_type_from_call(self) -> None:
+        from ai_code2doc.analyzer.type_inferrer import CppTypeInferrer
+        scope = CppTypeInferrer.infer("void f() {\n    auto result = compute();\n}\n", "test.cpp")
+        assert scope.lookup("result") == "compute"
+
+    def test_this_pointer(self) -> None:
+        from ai_code2doc.analyzer.type_inferrer import CppTypeInferrer
+        scope = CppTypeInferrer.infer("void f() {\n    pass\n}\n", "test.cpp", enclosing_class="MyClass")
+        assert scope.lookup("this") == "MyClass"
+
+    def test_primitive_type_ignored(self) -> None:
+        from ai_code2doc.analyzer.type_inferrer import CppTypeInferrer
+        scope = CppTypeInferrer.infer("void f() {\n    int x = 5;\n    double y = 3.0;\n}\n", "test.cpp")
+        assert scope.lookup("x") is None
+        assert scope.lookup("y") is None
