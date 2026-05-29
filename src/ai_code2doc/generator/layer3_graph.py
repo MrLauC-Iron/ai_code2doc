@@ -232,7 +232,19 @@ class Layer3GraphGenerator(BaseGenerator):
             from ai_code2doc.analyzer.dependency_store import DependencyStore
             from ai_code2doc.utils.hashing import compute_file_hash
 
-            db_path = output_dir / "layer3" / "dependency-graph.db"
+            from ai_code2doc.utils.git import get_current_branch, sanitize_branch_name
+
+            branch = get_current_branch(project_root)
+            if branch:
+                db_path = (
+                    output_dir
+                    / "layer3"
+                    / "branches"
+                    / sanitize_branch_name(branch)
+                    / "dependency-graph.db"
+                )
+            else:
+                db_path = output_dir / "layer3" / "dependency-graph.db"
             store = DependencyStore(db_path)
 
             # Compute file hashes for incremental tracking

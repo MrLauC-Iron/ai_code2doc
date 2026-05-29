@@ -68,7 +68,12 @@ def _get_store(context) -> "DependencyStore | None":
     """Try to open the SQLite store, return None if not available."""
     try:
         from ai_code2doc.analyzer.dependency_store import DependencyStore
-        db_path = context.output_dir / "layer3" / "dependency-graph.db"
+        from ai_code2doc.utils.git import get_layer3_db_path
+
+        db_path = get_layer3_db_path(
+            context.project_root,
+            str(context.output_dir.relative_to(context.project_root)),
+        )
         if db_path.exists():
             return DependencyStore(db_path)
     except Exception:
