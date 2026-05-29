@@ -18,12 +18,17 @@ app = typer.Typer(
 def main(
     db_path: Path = typer.Argument(
         None,
-        help="Path to dependency-graph.db (mutually exclusive with --project)",
+        help="Path to dependency-graph.db (mutually exclusive with --project/--repo)",
     ),
     project: Path = typer.Option(
         None,
         "--project", "-P",
         help="Project root directory (auto-detect git branch)",
+    ),
+    repo: Path = typer.Option(
+        None,
+        "--repo", "-R",
+        help="Git repo path for on-demand branch builds (enables branch management)",
     ),
     transport: str = typer.Option(
         "stdio",
@@ -44,54 +49,87 @@ def main(
     """Start the MCP server for dependency graph queries.
 
     Usage:
-        layer3-mcp <db_path>              # Direct DB path
-        layer3-mcp --project .            # Auto-detect git branch
+        layer3-mcp <db_path>                              # Direct DB path
+        layer3-mcp --project .                            # Auto-detect git branch
+        layer3-mcp --repo /path/to/repo --transport http # On-demand branch builds
         layer3-mcp --project . --transport http --port 8000
     """
+    if repo and (db_path or project):
+        typer.echo(
+            "--repo is mutually exclusive with db_path/--project.", err=True
+        )
+        raise typer.Exit(code=1)
+
     if db_path and project:
         typer.echo(
             "Provide either DB_PATH or --project, not both.", err=True
         )
         raise typer.Exit(code=1)
 
-    if project:
-        from code2doc_layer3_mcp.git import get_layer3_db_path
-
-        resolved_project = project.resolve()
-        db_path = get_layer3_db_path(resolved_project)
-
-    if db_path is None:
-        typer.echo(
-            "Usage: layer3-mcp DB_PATH or layer3-mcp --project PROJECT_DIR",
-            err=True,
-        )
-        raise typer.Exit(code=1)
-
-    resolved_db = db_path.resolve()
-    if not resolved_db.exists():
-        typer.echo(
-            f"Dependency graph not found at {resolved_db}\n"
-            f"Run 'ai-code2doc analyze' first.",
-            err=True,
-        )
-        raise typer.Exit(code=1)
-
     if transport not in ("stdio", "http"):
-        typer.echo(f"Unknown transport: {transport}. Use 'stdio' or 'http'.", err=True)
+        typer.echo(
+            f"Unknown transport: {transport}. Use 'stdio' or 'http'.",
+            err=True,
+        )
         raise typer.Exit(code=1)
 
     from code2doc_layer3_mcp.server import create_server
 
-    server = create_server(resolved_db)
+    if repo:
+        resolved_repo = repo.resolve()
+        from code2doc_layer3_mcp.branch_manager import BranchManager
 
-    if transport == "http":
-        import sys
+        manager = BranchManager(resolved_repo)
+        manager.ensure_repo()
 
-        print(
-            f"code2doc-layer3-mcp HTTP server starting on {host}:{port}",
-            file=sys.stderr,
-        )
-        print(f"DB: {resolved_db}", file=sys.stderr)
-        server.run(transport="streamable-http", host=host, port=port)
+        server = create_server(repo_path=resolved_repo)
+
+        if transport == "http":
+            import sys
+
+            print(
+                f"code2doc-layer3-mcp HTTP server starting on {host}:{port}",
+                file=sys.stderr,
+            )
+            print(f"Repo: {resolved_repo} (on-demand branch mode)", file=sys.stderr)
+            server.run(transport="streamable-http", host=host, port=port)
+        else:
+            server.run(transport="stdio")
     else:
-        server.run(transport="stdio")
+        # Local mode: --project or direct db_path
+        if project:
+            from code2doc_layer3_mcp.git import get_layer3_db_path
+
+            resolved_project = project.resolve()
+            db_path = get_layer3_db_path(resolved_project)
+
+        if db_path is None:
+            typer.echo(
+                "Usage: layer3-mcp DB_PATH or layer3-mcp --project PROJECT_DIR "
+                "or layer3-mcp --repo REPO_DIR",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+
+        resolved_db = db_path.resolve()
+        if not resolved_db.exists():
+            typer.echo(
+                f"Dependency graph not found at {resolved_db}\n"
+                f"Run 'ai-code2doc analyze' first.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+
+        server = create_server(resolved_db)
+
+        if transport == "http":
+            import sys
+
+            print(
+                f"code2doc-layer3-mcp HTTP server starting on {host}:{port}",
+                file=sys.stderr,
+            )
+            print(f"DB: {resolved_db}", file=sys.stderr)
+            server.run(transport="streamable-http", host=host, port=port)
+        else:
+            server.run(transport="stdio")

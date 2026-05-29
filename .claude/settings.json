@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "code2doc": {
+      "command": "C:/Users/MrLau/AppData/Local/Python/pythoncore-3.14-64/Scripts/layer3-mcp.exe",
+      "args": ["--project", "."],
+      "description": "ai-code2doc Layer 3 dependency graph queries"
+    }
+  }
+}

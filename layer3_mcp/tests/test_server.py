@@ -19,6 +19,8 @@ EXPECTED_TOOLS = {
     "path",
     "stats",
     "get_edges",
+    "ensure_branch",
+    "branch_status",
 }
 
 
@@ -38,7 +40,7 @@ class TestServerCreation:
     async def test_tool_count(self, db_path: Path) -> None:
         mcp = create_server(db_path)
         tools_result = await mcp.list_tools()
-        assert len(tools_result) == 10
+        assert len(tools_result) == 12
 
 
 class TestToolSchemas:
@@ -97,3 +99,64 @@ class TestToolCallProtocol:
         mcp = create_server(db_path)
         assert mcp.instructions is not None
         assert "dependency" in mcp.instructions.lower()
+
+
+class TestBranchParameterLocalMode:
+    """In local mode (db_path), the branch parameter is ignored."""
+
+    @pytest.mark.asyncio
+    async def test_branch_param_ignored(self, db_path: Path) -> None:
+        mcp = create_server(db_path)
+        result = await mcp.call_tool("dependents", {"target": "b.py", "branch": "some-branch"})
+        text = result[0][0].text
+        # Should work fine — branch is ignored in local mode
+        assert "a.py" in text
+
+    @pytest.mark.asyncio
+    async def test_branch_status_no_repo(self, db_path: Path) -> None:
+        mcp = create_server(db_path)
+        result = await mcp.call_tool("branch_status", {})
+        text = result[0][0].text
+        assert "not configured" in text
+
+    @pytest.mark.asyncio
+    async def test_ensure_branch_no_repo(self, db_path: Path) -> None:
+        mcp = create_server(db_path)
+        result = await mcp.call_tool("ensure_branch", {"branch": "main"})
+        text = result[0][0].text
+        assert "not configured" in text
+
+
+class TestBranchParameterSchemas:
+    """Verify branch parameter exists in tool schemas."""
+
+    @pytest.mark.asyncio
+    async def test_dependents_has_branch_param(self, db_path: Path) -> None:
+        mcp = create_server(db_path)
+        tools_result = await mcp.list_tools()
+        tool = next(t for t in tools_result if t.name == "dependents")
+        assert "branch" in tool.inputSchema["properties"]
+        # branch should NOT be required (optional)
+        assert "branch" not in tool.inputSchema.get("required", [])
+
+    @pytest.mark.asyncio
+    async def test_stats_has_branch_param(self, db_path: Path) -> None:
+        mcp = create_server(db_path)
+        tools_result = await mcp.list_tools()
+        tool = next(t for t in tools_result if t.name == "stats")
+        assert "branch" in tool.inputSchema["properties"]
+
+    @pytest.mark.asyncio
+    async def test_ensure_branch_schema(self, db_path: Path) -> None:
+        mcp = create_server(db_path)
+        tools_result = await mcp.list_tools()
+        tool = next(t for t in tools_result if t.name == "ensure_branch")
+        assert "branch" in tool.inputSchema["required"]
+
+    @pytest.mark.asyncio
+    async def test_branch_status_schema(self, db_path: Path) -> None:
+        mcp = create_server(db_path)
+        tools_result = await mcp.list_tools()
+        tool = next(t for t in tools_result if t.name == "branch_status")
+        assert "branch" in tool.inputSchema["properties"]
+        assert "branch" not in tool.inputSchema.get("required", [])
