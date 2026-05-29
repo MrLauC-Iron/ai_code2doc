@@ -16,8 +16,8 @@ def register(app: typer.Typer) -> None:
     @app.command()
     def mcp(
         project_path: Path = typer.Argument(
-            ...,
-            help="Path to the analysed project.",
+            ".",
+            help="Path to the analysed project (default: current directory).",
             exists=True,
         ),
     ) -> None:
@@ -33,7 +33,7 @@ def register(app: typer.Typer) -> None:
         if not db_path.exists():
             console.print(
                 f"[red]Error:[/red] Dependency graph not found at {db_path}\n"
-                f"Run [bold]ai-code2doc analyze {project_path}[/bold] first."
+                f"Run [bold]ai-code2doc analyze {project_root}[/bold] first."
             )
             raise typer.Exit(code=1)
 
