@@ -1,0 +1,16 @@
+{
+  "name": "fuxian",
+  "description": "自定义 AI 编码技能库：面向自研芯片编译器开发的 TDD、调试和协作最佳实践",
+  "version": "0.1.0",
+  "author": {
+    "name": "MrLau"
+  },
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "compiler",
+    "tdd",
+    "debugging",
+    "fuxian"
+  ]
+}
