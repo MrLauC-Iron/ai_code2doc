@@ -10,7 +10,7 @@ from tree_sitter import Language, Node, Parser
 
 import tree_sitter_cpp as tscpp
 
-from ai_code2doc.models.graph import CallSite
+from code2doc_core.models.graph import CallSite
 
 # ---------------------------------------------------------------------------
 # Module-level cached parser (created once for performance)

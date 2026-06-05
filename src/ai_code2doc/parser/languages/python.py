@@ -13,12 +13,12 @@ from pathlib import Path
 import tree_sitter_python as tspy
 from tree_sitter import Language, Node
 
-from ai_code2doc.models.module import ClassInfo, FunctionInfo, ImportInfo, InterfaceInfo
-from ai_code2doc.models.project import TechStack
-from ai_code2doc.parser.base_extractor import BaseStructureExtractor
-from ai_code2doc.parser.base_resolver import BaseImportResolver
-from ai_code2doc.parser.language_registry import LanguageAdapter, LanguageRegistry
-from ai_code2doc.parser.languages._common import (
+from code2doc_core.models.module import ClassInfo, FunctionInfo, ImportInfo, InterfaceInfo
+from code2doc_core.models.project import TechStack
+from code2doc_core.parser.base_extractor import BaseStructureExtractor
+from code2doc_core.parser.base_resolver import BaseImportResolver
+from code2doc_core.parser.language_registry import LanguageAdapter, LanguageRegistry
+from code2doc_core.parser.languages._common import (
     get_text,
     get_line,
     get_end_line,

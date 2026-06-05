@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 
 from tree_sitter import Node
 
-from ai_code2doc.models.module import (
+from code2doc_core.models.module import (
     ClassInfo,
     FunctionInfo,
     ImportInfo,

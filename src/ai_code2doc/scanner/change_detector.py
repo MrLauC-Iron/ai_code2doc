@@ -4,8 +4,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from ai_code2doc.models.analysis_state import AnalysisState, FileState
-from ai_code2doc.utils.hashing import compute_file_hash
+from code2doc_core.models.analysis_state import AnalysisState, FileState
+from code2doc_core.utils.hashing import compute_file_hash
 
 
 class ChangeDetector:

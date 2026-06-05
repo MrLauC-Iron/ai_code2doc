@@ -40,7 +40,7 @@ class FileFilter:
             return False
         suffix = path.suffix.lower()
         # Lazy import to avoid circular dependency at module level.
-        from ai_code2doc.parser.language_registry import LanguageRegistry
+        from code2doc_core.parser.language_registry import LanguageRegistry
 
         if suffix not in LanguageRegistry.all_extensions():
             return False

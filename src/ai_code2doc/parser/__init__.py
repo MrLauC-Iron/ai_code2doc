@@ -7,11 +7,11 @@ are registered in the :class:`~ai_code2doc.parser.language_registry.LanguageRegi
 
 from __future__ import annotations
 
-from ai_code2doc.parser.base_extractor import BaseStructureExtractor
-from ai_code2doc.parser.base_parser import BaseParser
-from ai_code2doc.parser.base_resolver import BaseImportResolver
-from ai_code2doc.parser.language_registry import LanguageAdapter, LanguageRegistry
-from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
+from code2doc_core.parser.base_extractor import BaseStructureExtractor
+from code2doc_core.parser.base_parser import BaseParser
+from code2doc_core.parser.base_resolver import BaseImportResolver
+from code2doc_core.parser.language_registry import LanguageAdapter, LanguageRegistry
+from code2doc_core.parser.tree_sitter_parser import TreeSitterParser
 
 __all__ = [
     "BaseParser",

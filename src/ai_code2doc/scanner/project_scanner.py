@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ai_code2doc.scanner.file_filter import FileFilter
+from code2doc_core.scanner.file_filter import FileFilter
 
 
 @dataclass

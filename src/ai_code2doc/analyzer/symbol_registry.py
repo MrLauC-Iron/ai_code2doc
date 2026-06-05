@@ -6,11 +6,11 @@ from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ai_code2doc.models.graph import CallSite, SymbolDefinition
-from ai_code2doc.models.module import FileInfo
+from code2doc_core.models.graph import CallSite, SymbolDefinition
+from code2doc_core.models.module import FileInfo
 
 if TYPE_CHECKING:
-    from ai_code2doc.analyzer.type_inferrer import TypeScope
+    from code2doc_core.analyzer.type_inferrer import TypeScope
 
 
 class SymbolRegistry:

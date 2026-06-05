@@ -9,10 +9,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ai_code2doc.models.project import TechStack
+from code2doc_core.models.project import TechStack
 
 if TYPE_CHECKING:
-    from ai_code2doc.models.build import CMakeProjectInfo
+    from code2doc_core.models.build import CMakeProjectInfo
 
 
 class TechStackDetector:
@@ -28,7 +28,7 @@ class TechStackDetector:
 
     def _detect_languages_in_project(self) -> list[str]:
         """Scan project files to determine which languages are present."""
-        from ai_code2doc.parser.language_registry import LanguageRegistry
+        from code2doc_core.parser.language_registry import LanguageRegistry
 
         seen_lang_ids: set[str] = set()
         ext_set = LanguageRegistry.all_extensions()
@@ -46,7 +46,7 @@ class TechStackDetector:
         """Detect tech stack by combining results from all language adapters."""
         # Ensure languages are registered.
         import ai_code2doc.parser.languages  # noqa: F401
-        from ai_code2doc.parser.language_registry import LanguageRegistry
+        from code2doc_core.parser.language_registry import LanguageRegistry
 
         lang_ids = self._detect_languages_in_project()
 
@@ -90,7 +90,7 @@ class TechStackDetector:
     def detect_entry_points(self) -> list[str]:
         """Detect entry points from all language adapters."""
         import ai_code2doc.parser.languages  # noqa: F401
-        from ai_code2doc.parser.language_registry import LanguageRegistry
+        from code2doc_core.parser.language_registry import LanguageRegistry
 
         lang_ids = self._detect_languages_in_project()
         entry_points: list[str] = []

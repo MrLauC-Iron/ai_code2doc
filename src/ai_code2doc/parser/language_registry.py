@@ -12,9 +12,9 @@ from pathlib import Path
 
 from tree_sitter import Language
 
-from ai_code2doc.models.project import TechStack
-from ai_code2doc.parser.base_extractor import BaseStructureExtractor
-from ai_code2doc.parser.base_resolver import BaseImportResolver
+from code2doc_core.models.project import TechStack
+from code2doc_core.parser.base_extractor import BaseStructureExtractor
+from code2doc_core.parser.base_resolver import BaseImportResolver
 
 
 @dataclass(frozen=True)
@@ -57,7 +57,7 @@ class LanguageRegistry:
 
     Usage::
 
-        from ai_code2doc.parser.language_registry import LanguageRegistry
+        from code2doc_core.parser.language_registry import LanguageRegistry
 
         adapter = LanguageRegistry.get_by_extension(".py")
     """

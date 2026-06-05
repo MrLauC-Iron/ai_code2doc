@@ -10,8 +10,8 @@ import json
 import logging
 from pathlib import Path
 
-from ai_code2doc.models.module import FileInfo
-from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
+from code2doc_core.models.module import FileInfo
+from code2doc_core.parser.tree_sitter_parser import TreeSitterParser
 
 logger = logging.getLogger(__name__)
 

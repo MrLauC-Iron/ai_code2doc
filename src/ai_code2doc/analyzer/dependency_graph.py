@@ -6,9 +6,9 @@ from pathlib import Path
 
 import networkx as nx
 
-from ai_code2doc.models.module import FileInfo, ModuleSummary
-from ai_code2doc.models.graph import CallSite, DependencyEdge, CallChain, ImpactHint, CycleInfo
-from ai_code2doc.parser.language_registry import LanguageRegistry
+from code2doc_core.models.module import FileInfo, ModuleSummary
+from code2doc_core.models.graph import CallSite, DependencyEdge, CallChain, ImpactHint, CycleInfo
+from code2doc_core.parser.language_registry import LanguageRegistry
 
 
 class DependencyGraphBuilder:

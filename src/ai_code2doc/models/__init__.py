@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from ai_code2doc.models.analysis_state import AnalysisState, FileState
-from ai_code2doc.models.graph import (
+from code2doc_core.models.analysis_state import AnalysisState, FileState
+from code2doc_core.models.graph import (
     CallChain,
     CallSite,
     CycleInfo,
@@ -11,8 +11,8 @@ from ai_code2doc.models.graph import (
     ImpactHint,
     SymbolDefinition,
 )
-from ai_code2doc.models.knowledge import KnowledgeDocument
-from ai_code2doc.models.module import (
+from code2doc_core.models.knowledge import KnowledgeDocument
+from code2doc_core.models.module import (
     ClassInfo,
     FileInfo,
     FunctionInfo,
@@ -20,7 +20,7 @@ from ai_code2doc.models.module import (
     InterfaceInfo,
     ModuleSummary,
 )
-from ai_code2doc.models.project import ProjectMetadata, TechStack
+from code2doc_core.models.project import ProjectMetadata, TechStack
 
 __all__ = [
     # project

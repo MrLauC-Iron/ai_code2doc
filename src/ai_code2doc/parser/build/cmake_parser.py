@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from ai_code2doc.models.build import CMakeProjectInfo, CMakeTarget
+from code2doc_core.models.build import CMakeProjectInfo, CMakeTarget
 
 # ---------------------------------------------------------------------------
 # Patterns

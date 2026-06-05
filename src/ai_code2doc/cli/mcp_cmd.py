@@ -29,7 +29,7 @@ def register(app: typer.Typer) -> None:
         settings = Settings()
         project_root = project_path.resolve()
 
-        from ai_code2doc.utils.git import get_layer3_db_path
+        from code2doc_core.utils.git import get_layer3_db_path
 
         db_path = get_layer3_db_path(project_root, settings.output_dir)
 

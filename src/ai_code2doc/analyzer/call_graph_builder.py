@@ -5,12 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
-from ai_code2doc.analyzer.call_extractor import PythonCallExtractor
-from ai_code2doc.analyzer.c_cpp_calls import CCppCallExtractor, _COMMON_CPP_MACROS, collect_macro_names
-from ai_code2doc.analyzer.symbol_registry import SymbolRegistry
-from ai_code2doc.analyzer.type_inferrer import CppTypeInferrer, TypeInferrer
-from ai_code2doc.models.graph import CallSite
-from ai_code2doc.models.module import FileInfo
+from code2doc_core.analyzer.call_extractor import PythonCallExtractor
+from code2doc_core.analyzer.c_cpp_calls import CCppCallExtractor, _COMMON_CPP_MACROS, collect_macro_names
+from code2doc_core.analyzer.symbol_registry import SymbolRegistry
+from code2doc_core.analyzer.type_inferrer import CppTypeInferrer, TypeInferrer
+from code2doc_core.models.graph import CallSite
+from code2doc_core.models.module import FileInfo
 
 
 class CallGraphBuilder:

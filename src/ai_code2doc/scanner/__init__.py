@@ -1,6 +1,6 @@
-from ai_code2doc.scanner.change_detector import ChangeDetector
-from ai_code2doc.scanner.file_filter import FileFilter
-from ai_code2doc.scanner.project_scanner import ProjectScanner, ScanResult
+from code2doc_core.scanner.change_detector import ChangeDetector
+from code2doc_core.scanner.file_filter import FileFilter
+from code2doc_core.scanner.project_scanner import ProjectScanner, ScanResult
 
 __all__ = [
     "ChangeDetector",

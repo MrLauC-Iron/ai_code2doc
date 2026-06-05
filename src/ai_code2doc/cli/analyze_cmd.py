@@ -53,7 +53,7 @@ def register(app: typer.Typer) -> None:
     ) -> None:
         """Analyse a project and generate knowledge documentation."""
         from ai_code2doc.config.settings import Settings
-        from ai_code2doc.scanner.change_detector import ChangeDetector
+        from code2doc_core.scanner.change_detector import ChangeDetector
 
         settings = Settings()
         project_root = project_path.resolve()
@@ -105,7 +105,7 @@ def register(app: typer.Typer) -> None:
         ) as progress:
             task = progress.add_task("Scanning project files...", total=None)
 
-            from ai_code2doc.scanner.project_scanner import ProjectScanner
+            from code2doc_core.scanner.project_scanner import ProjectScanner
 
             scanner = ProjectScanner(
                 project_root,

@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from ai_code2doc.models.module import FileInfo
+from code2doc_core.models.module import FileInfo
 
 
 class BaseParser(ABC):

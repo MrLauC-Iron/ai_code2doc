@@ -10,7 +10,7 @@ from tree_sitter import Language, Node, Parser
 
 import tree_sitter_python as tspy
 
-from ai_code2doc.models.graph import CallSite
+from code2doc_core.models.graph import CallSite
 
 # ---------------------------------------------------------------------------
 # Module-level cached parser (created once for performance)
@@ -197,7 +197,7 @@ def _walk_for_calls(node: Node, results: list[CallSite], caller_fqn: str, file_p
             return
 
         # Skip known external library calls (stdlib, mocks, third-party).
-        from ai_code2doc.analyzer.external_libs import is_external_call
+        from code2doc_core.analyzer.external_libs import is_external_call
         if is_external_call(callee_name, file_path):
             # Still need to recurse into children for nested calls.
             for child in node.children:

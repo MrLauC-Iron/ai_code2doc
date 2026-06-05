@@ -4,7 +4,7 @@
     Use the helpers in :mod:`ai_code2doc.parser.languages._common` instead.
 """
 
-from ai_code2doc.parser.languages._common import (  # noqa: F401
+from code2doc_core.parser.languages._common import (  # noqa: F401
     get_text as node_text,
     get_line as node_line,
     get_end_line as node_end_line,

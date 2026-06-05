@@ -13,20 +13,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ai_code2doc.analyzer.dependency_graph import DependencyGraphBuilder
-from ai_code2doc.analyzer.metrics import MetricsCalculator
+from code2doc_core.analyzer.dependency_graph import DependencyGraphBuilder
+from code2doc_core.analyzer.metrics import MetricsCalculator
 from ai_code2doc.config.settings import Settings
 from ai_code2doc.generator.base_generator import BaseGenerator
 from ai_code2doc.generator.markdown_writer import MarkdownWriter
 from ai_code2doc.generator.prompt_templates import format_layer3_prompt
 from ai_code2doc.llm.client import LLMClient
-from ai_code2doc.models.knowledge import KnowledgeDocument
-from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
-from ai_code2doc.scanner.project_scanner import ProjectScanner
+from code2doc_core.models.knowledge import KnowledgeDocument
+from code2doc_core.parser.tree_sitter_parser import TreeSitterParser
+from code2doc_core.scanner.project_scanner import ProjectScanner
 
 if TYPE_CHECKING:
-    from ai_code2doc.models.build import CMakeProjectInfo
-    from ai_code2doc.models.graph import CallSite
+    from code2doc_core.models.build import CMakeProjectInfo
+    from code2doc_core.models.graph import CallSite
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ class Layer3GraphGenerator(BaseGenerator):
         scan_result = scanner.scan()
 
         # 2. Parse target files (incremental via cache)
-        from ai_code2doc.utils.parse_cache import ParseCache
+        from code2doc_core.utils.parse_cache import ParseCache
 
         cache = ParseCache(output_dir)
         changed_set = set(changed_files) if changed_files else None
@@ -90,7 +90,7 @@ class Layer3GraphGenerator(BaseGenerator):
             graph_builder.add_file(fi)
 
         # 3b. Build call graph
-        from ai_code2doc.analyzer.call_graph_builder import CallGraphBuilder
+        from code2doc_core.analyzer.call_graph_builder import CallGraphBuilder
 
         call_builder = CallGraphBuilder(project_root)
         call_sites = call_builder.build_for_files(file_infos)
@@ -100,7 +100,7 @@ class Layer3GraphGenerator(BaseGenerator):
         # 3c. Parse CMake build info if available
         cmake_info: CMakeProjectInfo | None = None
         if (project_root / "CMakeLists.txt").is_file():
-            from ai_code2doc.parser.build.cmake_parser import CMakeParser
+            from code2doc_core.parser.build.cmake_parser import CMakeParser
             cmake_info = CMakeParser().parse(project_root)
 
         # 4. Compute structural metrics
@@ -229,10 +229,10 @@ class Layer3GraphGenerator(BaseGenerator):
 
         # 14. Export to SQLite + JSON + module embeddings
         try:
-            from ai_code2doc.analyzer.dependency_store import DependencyStore
-            from ai_code2doc.utils.hashing import compute_file_hash
+            from code2doc_core.analyzer.dependency_store import DependencyStore
+            from code2doc_core.utils.hashing import compute_file_hash
 
-            from ai_code2doc.utils.git import get_current_branch, sanitize_branch_name
+            from code2doc_core.utils.git import get_current_branch, sanitize_branch_name
 
             branch = get_current_branch(project_root)
             if branch:

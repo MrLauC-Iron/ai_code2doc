@@ -35,7 +35,7 @@ def register(app: typer.Typer) -> None:
     ) -> None:
         """Show the analysis state and output summary for a project."""
         from ai_code2doc.config.settings import Settings
-        from ai_code2doc.models.analysis_state import AnalysisState
+        from code2doc_core.models.analysis_state import AnalysisState
 
         settings = Settings()
         project_root = project_path.resolve()

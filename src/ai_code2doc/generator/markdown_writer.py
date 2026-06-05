@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ai_code2doc.models.knowledge import KnowledgeDocument
+from code2doc_core.models.knowledge import KnowledgeDocument
 
 
 class MarkdownWriter:

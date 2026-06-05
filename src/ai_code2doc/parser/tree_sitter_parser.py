@@ -11,10 +11,10 @@ from pathlib import Path
 
 from tree_sitter import Parser
 
-from ai_code2doc.models.module import FileInfo
-from ai_code2doc.parser.base_parser import BaseParser
-from ai_code2doc.parser.language_registry import LanguageRegistry
-from ai_code2doc.utils.hashing import compute_file_hash
+from code2doc_core.models.module import FileInfo
+from code2doc_core.parser.base_parser import BaseParser
+from code2doc_core.parser.language_registry import LanguageRegistry
+from code2doc_core.utils.hashing import compute_file_hash
 
 # Ensure built-in languages are registered.
 import ai_code2doc.parser.languages  # noqa: F401
