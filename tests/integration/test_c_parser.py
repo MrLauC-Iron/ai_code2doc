@@ -150,7 +150,7 @@ class TestCFullProject:
 class TestCIncludeResolution:
     def test_resolve_local_include(self, sample_c_project: Path) -> None:
         """Resolve #include "utils.h" from src/main.c."""
-        import ai_code2doc.parser.languages  # noqa: F401
+        import code2doc_core.parser.languages  # noqa: F401
         from code2doc_core.parser.language_registry import LanguageRegistry
 
         adapter = LanguageRegistry.get_by_extension(".c")
@@ -164,7 +164,7 @@ class TestCIncludeResolution:
 
     def test_resolve_system_header_returns_none(self, sample_c_project: Path) -> None:
         """System headers (e.g. <stdio.h>) should resolve to None."""
-        import ai_code2doc.parser.languages  # noqa: F401
+        import code2doc_core.parser.languages  # noqa: F401
         from code2doc_core.parser.language_registry import LanguageRegistry
 
         adapter = LanguageRegistry.get_by_extension(".c")

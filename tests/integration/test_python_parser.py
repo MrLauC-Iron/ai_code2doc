@@ -148,7 +148,7 @@ class TestPythonFullProject:
 class TestPythonImportResolution:
     def test_resolve_dotted_import(self, sample_py_project: Path) -> None:
         """Resolve 'from src.models.user import User' to the actual file."""
-        import ai_code2doc.parser.languages  # noqa: F401
+        import code2doc_core.parser.languages  # noqa: F401
         from code2doc_core.parser.language_registry import LanguageRegistry
 
         adapter = LanguageRegistry.get_by_extension(".py")
@@ -165,7 +165,7 @@ class TestPythonImportResolution:
 
     def test_resolve_third_party_returns_none(self, sample_py_project: Path) -> None:
         """Third-party imports (e.g. numpy) should resolve to None."""
-        import ai_code2doc.parser.languages  # noqa: F401
+        import code2doc_core.parser.languages  # noqa: F401
         from code2doc_core.parser.language_registry import LanguageRegistry
 
         adapter = LanguageRegistry.get_by_extension(".py")
