@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.analyzer.dependency_graph import DependencyGraphBuilder
-from ai_code2doc.models.module import FileInfo, ImportInfo
-from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
+from code2doc_core.analyzer.dependency_graph import DependencyGraphBuilder
+from code2doc_core.models.module import FileInfo, ImportInfo
+from code2doc_core.parser.tree_sitter_parser import TreeSitterParser
 
 
 @pytest.fixture

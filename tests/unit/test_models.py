@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.models.module import (
+from code2doc_core.models.module import (
     FunctionInfo,
     ClassInfo,
     InterfaceInfo,
@@ -15,10 +15,10 @@ from ai_code2doc.models.module import (
     FileInfo,
     ModuleSummary,
 )
-from ai_code2doc.models.graph import DependencyEdge, CallChain, ImpactHint, CycleInfo
-from ai_code2doc.models.knowledge import KnowledgeDocument
-from ai_code2doc.models.analysis_state import AnalysisState, FileState
-from ai_code2doc.models.project import TechStack
+from code2doc_core.models.graph import DependencyEdge, CallChain, ImpactHint, CycleInfo
+from code2doc_core.models.knowledge import KnowledgeDocument
+from code2doc_core.models.analysis_state import AnalysisState, FileState
+from code2doc_core.models.project import TechStack
 
 
 # ---------------------------------------------------------------------------

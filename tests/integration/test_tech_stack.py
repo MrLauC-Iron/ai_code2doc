@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.analyzer.tech_stack import TechStackDetector
+from code2doc_core.analyzer.tech_stack import TechStackDetector
 
 
 class TestTechStackDetection:

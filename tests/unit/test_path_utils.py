@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.utils.path_utils import (
+from code2doc_core.utils.path_utils import (
     relative_path,
     module_name_from_path,
     ensure_dir,

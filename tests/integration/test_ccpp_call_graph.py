@@ -3,15 +3,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ai_code2doc.analyzer.call_graph_builder import CallGraphBuilder
-from ai_code2doc.analyzer.dependency_graph import DependencyGraphBuilder
-from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
+from code2doc_core.analyzer.call_graph_builder import CallGraphBuilder
+from code2doc_core.analyzer.dependency_graph import DependencyGraphBuilder
+from code2doc_core.parser.tree_sitter_parser import TreeSitterParser
 
 
 class TestCCppCallGraphIntegration:
     def test_cpp_project(self, sample_c_project: Path, output_dir: Path) -> None:
         """Build a call graph for the sample C project."""
-        from ai_code2doc.scanner.project_scanner import ProjectScanner
+        from code2doc_core.scanner.project_scanner import ProjectScanner
 
         scanner = ProjectScanner(sample_c_project)
         scan_result = scanner.scan()

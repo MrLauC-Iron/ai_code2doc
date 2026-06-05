@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ai_code2doc.parser.language_registry import LanguageAdapter, LanguageRegistry
+from code2doc_core.parser.language_registry import LanguageAdapter, LanguageRegistry
 
 
 class TestLanguageRegistry:

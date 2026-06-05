@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from ai_code2doc.analyzer.c_cpp_calls import CCppCallExtractor
-from ai_code2doc.models.graph import CallSite
+from code2doc_core.analyzer.c_cpp_calls import CCppCallExtractor
+from code2doc_core.models.graph import CallSite
 
 
 class TestCCppCallExtractor:
@@ -175,7 +175,7 @@ class TestCCppCallExtractor:
 
     def test_macro_collection(self) -> None:
         """collect_macro_names extracts function-like macro definitions."""
-        from ai_code2doc.analyzer.c_cpp_calls import collect_macro_names
+        from code2doc_core.analyzer.c_cpp_calls import collect_macro_names
         source = (
             "#define CV_Assert(expr) do { if(!(expr)) ... } while(0)\n"
             "#define MIN(a,b) ((a)<(b)?(a):(b))\n"

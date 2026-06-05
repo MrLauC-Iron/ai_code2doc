@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from ai_code2doc.generator.markdown_writer import MarkdownWriter
-from ai_code2doc.models.knowledge import KnowledgeDocument
+from code2doc_core.models.knowledge import KnowledgeDocument
 
 
 @pytest.fixture

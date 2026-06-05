@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.analyzer.tech_stack import TechStackDetector
-from ai_code2doc.analyzer.dependency_graph import DependencyGraphBuilder
-from ai_code2doc.parser.build.cmake_parser import CMakeParser
-from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
-from ai_code2doc.scanner.project_scanner import ProjectScanner
-from ai_code2doc.utils.parse_cache import ParseCache
+from code2doc_core.analyzer.tech_stack import TechStackDetector
+from code2doc_core.analyzer.dependency_graph import DependencyGraphBuilder
+from code2doc_core.parser.build.cmake_parser import CMakeParser
+from code2doc_core.parser.tree_sitter_parser import TreeSitterParser
+from code2doc_core.scanner.project_scanner import ProjectScanner
+from code2doc_core.utils.parse_cache import ParseCache
 
 
 class TestCMakeInfoParsing:
@@ -90,7 +90,7 @@ class TestCMakeInfoInDependencyGraph:
         cache = ParseCache(tmp_path / ".ai_code2doc_test")
         parser = TreeSitterParser()
 
-        from ai_code2doc.parser.languages.c_cpp import CCppImportResolver
+        from code2doc_core.parser.languages.c_cpp import CCppImportResolver
         # Create a temporary resolver with cmake_info
         original_resolver = CCppImportResolver()
 

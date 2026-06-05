@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
+from code2doc_core.parser.tree_sitter_parser import TreeSitterParser
 
 
 @pytest.fixture
@@ -149,7 +149,7 @@ class TestPythonImportResolution:
     def test_resolve_dotted_import(self, sample_py_project: Path) -> None:
         """Resolve 'from src.models.user import User' to the actual file."""
         import ai_code2doc.parser.languages  # noqa: F401
-        from ai_code2doc.parser.language_registry import LanguageRegistry
+        from code2doc_core.parser.language_registry import LanguageRegistry
 
         adapter = LanguageRegistry.get_by_extension(".py")
         assert adapter is not None
@@ -166,7 +166,7 @@ class TestPythonImportResolution:
     def test_resolve_third_party_returns_none(self, sample_py_project: Path) -> None:
         """Third-party imports (e.g. numpy) should resolve to None."""
         import ai_code2doc.parser.languages  # noqa: F401
-        from ai_code2doc.parser.language_registry import LanguageRegistry
+        from code2doc_core.parser.language_registry import LanguageRegistry
 
         adapter = LanguageRegistry.get_by_extension(".py")
         assert adapter is not None

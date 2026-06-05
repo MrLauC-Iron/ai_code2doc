@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.utils.hashing import compute_file_hash, compute_content_hash
+from code2doc_core.utils.hashing import compute_file_hash, compute_content_hash
 
 
 class TestComputeContentHash:

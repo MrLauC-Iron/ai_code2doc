@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
+from code2doc_core.parser.tree_sitter_parser import TreeSitterParser
 
 
 @pytest.fixture
@@ -151,7 +151,7 @@ class TestCIncludeResolution:
     def test_resolve_local_include(self, sample_c_project: Path) -> None:
         """Resolve #include "utils.h" from src/main.c."""
         import ai_code2doc.parser.languages  # noqa: F401
-        from ai_code2doc.parser.language_registry import LanguageRegistry
+        from code2doc_core.parser.language_registry import LanguageRegistry
 
         adapter = LanguageRegistry.get_by_extension(".c")
         assert adapter is not None
@@ -165,7 +165,7 @@ class TestCIncludeResolution:
     def test_resolve_system_header_returns_none(self, sample_c_project: Path) -> None:
         """System headers (e.g. <stdio.h>) should resolve to None."""
         import ai_code2doc.parser.languages  # noqa: F401
-        from ai_code2doc.parser.language_registry import LanguageRegistry
+        from code2doc_core.parser.language_registry import LanguageRegistry
 
         adapter = LanguageRegistry.get_by_extension(".c")
         assert adapter is not None

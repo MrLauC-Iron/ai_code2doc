@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from ai_code2doc.analyzer.call_extractor import PythonCallExtractor
-from ai_code2doc.models.graph import CallSite
+from code2doc_core.analyzer.call_extractor import PythonCallExtractor
+from code2doc_core.models.graph import CallSite
 
 
 class TestPythonCallExtractor:

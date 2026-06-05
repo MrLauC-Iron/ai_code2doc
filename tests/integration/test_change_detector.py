@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.scanner.change_detector import ChangeDetector
-from ai_code2doc.scanner.project_scanner import ProjectScanner
+from code2doc_core.scanner.change_detector import ChangeDetector
+from code2doc_core.scanner.project_scanner import ProjectScanner
 
 
 class TestChangeDetector:

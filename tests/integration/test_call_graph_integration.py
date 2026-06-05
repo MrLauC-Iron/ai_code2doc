@@ -5,15 +5,15 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.analyzer.call_graph_builder import CallGraphBuilder
-from ai_code2doc.analyzer.dependency_graph import DependencyGraphBuilder
-from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
+from code2doc_core.analyzer.call_graph_builder import CallGraphBuilder
+from code2doc_core.analyzer.dependency_graph import DependencyGraphBuilder
+from code2doc_core.parser.tree_sitter_parser import TreeSitterParser
 
 
 class TestCallGraphEndToEnd:
     def test_sample_python_project(self, sample_py_project: Path, output_dir: Path) -> None:
         """Build a call graph for the sample Python project and verify results."""
-        from ai_code2doc.scanner.project_scanner import ProjectScanner
+        from code2doc_core.scanner.project_scanner import ProjectScanner
 
         scanner = ProjectScanner(sample_py_project)
         scan_result = scanner.scan()

@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.scanner.file_filter import FileFilter
-from ai_code2doc.scanner.project_scanner import ProjectScanner
+from code2doc_core.scanner.file_filter import FileFilter
+from code2doc_core.scanner.project_scanner import ProjectScanner
 
 
 class TestFileFilter:
