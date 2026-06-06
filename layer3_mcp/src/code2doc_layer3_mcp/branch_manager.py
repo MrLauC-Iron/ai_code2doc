@@ -26,7 +26,7 @@ class BranchManager:
 
     def get_db_path(self, branch: str) -> Path:
         """Return the DB path for a given branch."""
-        from code2doc_layer3_mcp.git import sanitize_branch_name
+        from code2doc_core.utils.git import sanitize_branch_name
 
         return (
             self.repo_path

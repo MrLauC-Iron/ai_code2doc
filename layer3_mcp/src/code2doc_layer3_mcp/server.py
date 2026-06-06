@@ -8,7 +8,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from code2doc_layer3_mcp.dependency_store import DependencyStore
+from code2doc_core.analyzer.dependency_store import DependencyStore
 
 # Module-level state set by create_server()
 _default_db: Path | None = None

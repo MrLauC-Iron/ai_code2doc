@@ -98,7 +98,7 @@ def main(
     else:
         # Local mode: --project or direct db_path
         if project:
-            from code2doc_layer3_mcp.git import get_layer3_db_path
+            from code2doc_core.utils.git import get_layer3_db_path
 
             resolved_project = project.resolve()
             db_path = get_layer3_db_path(resolved_project)
