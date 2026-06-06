@@ -180,3 +180,31 @@ class BranchManager:
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
         return None
+
+    async def fetch_remote_heads(self, branches: list[str]) -> dict[str, bool]:
+        """Fetch remote refs and check if each branch has changes.
+
+        Returns dict mapping branch name -> True if remote has new commits.
+        """
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None, self._run_git, "fetch", "--dry-run", "origin"
+        )
+        if result.returncode != 0:
+            logger.warning("git fetch --dry-run failed: %s", result.stderr.strip())
+            return {b: False for b in branches}
+
+        changed: dict[str, bool] = {}
+        for branch in branches:
+            local = await loop.run_in_executor(
+                None, self._run_git, "rev-parse", branch
+            )
+            remote = await loop.run_in_executor(
+                None, self._run_git, "rev-parse", f"origin/{branch}"
+            )
+            if local.returncode == 0 and remote.returncode == 0:
+                changed[branch] = local.stdout.strip() != remote.stdout.strip()
+            else:
+                changed[branch] = False
+
+        return changed

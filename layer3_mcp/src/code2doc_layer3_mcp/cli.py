@@ -45,6 +45,11 @@ def main(
         "--port", "-p",
         help="Port for HTTP transport",
     ),
+    poll_interval: int = typer.Option(
+        0,
+        "--poll-interval",
+        help="Enable periodic git polling (seconds). 0 = disabled.",
+    ),
 ) -> None:
     """Start the MCP server for dependency graph queries.
 
