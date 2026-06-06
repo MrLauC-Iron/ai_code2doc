@@ -21,6 +21,9 @@ EXPECTED_TOOLS = {
     "get_edges",
     "ensure_branch",
     "branch_status",
+    "poll_start",
+    "poll_stop",
+    "poll_status",
 }
 
 
@@ -40,7 +43,7 @@ class TestServerCreation:
     async def test_tool_count(self, db_path: Path) -> None:
         mcp = create_server(db_path)
         tools_result = await mcp.list_tools()
-        assert len(tools_result) == 12
+        assert len(tools_result) == 15
 
 
 class TestToolSchemas:
