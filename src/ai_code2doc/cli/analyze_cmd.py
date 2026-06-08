@@ -147,35 +147,13 @@ def register(app: typer.Typer) -> None:
                 selected_layers = [l for l in selected_layers if l != 1]
 
             if 2 in selected_layers:
-                from ai_code2doc.generator.layer2_modules import Layer2ModuleGenerator
-
-                gen2 = Layer2ModuleGenerator(settings)
-                with Progress(
-                    SpinnerColumn(),
-                    TextColumn("[progress.description]{task.description}"),
-                    console=console,
-                ) as progress:
-                    task = progress.add_task(
-                        "Generating Layer 2: Module summaries...", total=None
-                    )
-                    docs = await gen2.generate(
-                        project_root,
-                        output_dir,
-                        use_llm=not no_llm,
-                        changed_files=changed_files,
-                    )
-                    all_docs.extend(docs)
-                    progress.update(task, completed=True)
-
-                if docs:
-                    console.print(
-                        f"  [green]\u2713[/green] Layer 2: "
-                        f"{len(docs)} module summaries generated"
-                    )
-                else:
-                    console.print(
-                        "  [dim]Layer 2: Skipped (no changes)[/dim]"
-                    )
+                console.print(
+                    "  [yellow]Layer 2 is now handled by the standalone layer2-mcp package.[/yellow]"
+                )
+                console.print(
+                    "  Run [bold]layer2-mcp serve <project>[/bold] to start the module documentation server."
+                )
+                selected_layers = [l for l in selected_layers if l != 2]
 
             if 3 in selected_layers:
                 console.print(

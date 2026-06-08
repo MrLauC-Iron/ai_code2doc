@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-from pathlib import Path
 
 from ai_code2doc.agent.models import ToolCall, ToolDefinition, ToolParameter, ToolResult
 
@@ -24,32 +22,13 @@ def execute(call: ToolCall, context) -> ToolResult:
     if layer is None:
         return ToolResult(tool_call_id=call.id, content="No layer specified.", is_error=True)
     layer = int(layer)
-    module_name = call.arguments.get("module")
-    output_dir = context.output_dir
 
     try:
         if layer == 1:
             return ToolResult(tool_call_id=call.id, content="Layer 1 is user-maintained. Use layer3-mcp for dependency graph analysis.", is_error=True)
 
         if layer == 2:
-            from ai_code2doc.generator.layer2_modules import Layer2ModuleGenerator
-            from ai_code2doc.generator.markdown_writer import MarkdownWriter
-            gen = Layer2ModuleGenerator(context.settings)
-            docs = asyncio.run(
-                gen.generate(context.project_root, output_dir, use_llm=bool(context.settings.llm_api_key), changed_files=None)
-            )
-            writer = MarkdownWriter()
-            paths = []
-            for doc in docs:
-                if module_name and module_name.lower() not in doc.title.lower():
-                    continue
-                p = output_dir / "layer2" / f"{doc.id}.md"
-                writer.write_doc(p, doc)
-                paths.append(str(p))
-            msg = f"Updated Layer 2 modules ({len(paths)} docs):"
-            if module_name:
-                msg = f"Updated Layer 2 for '{module_name}' ({len(paths)} docs):"
-            return ToolResult(tool_call_id=call.id, content=msg + "\n" + "\n".join(f"  - {p}" for p in paths) if paths else f"No matching modules found for '{module_name}'.")
+            return ToolResult(tool_call_id=call.id, content="Layer 2 is handled by the standalone layer2-mcp package. Use `layer2-mcp serve <project>` for module documentation management.", is_error=True)
 
         elif layer == 3:
             return ToolResult(tool_call_id=call.id, content="Layer 3 is handled by the standalone layer3-mcp package. Use `layer3-mcp --repo <path>` for dependency graph analysis.", is_error=True)
