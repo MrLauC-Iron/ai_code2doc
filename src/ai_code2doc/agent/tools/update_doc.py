@@ -29,21 +29,9 @@ def execute(call: ToolCall, context) -> ToolResult:
 
     try:
         if layer == 1:
-            from ai_code2doc.generator.layer1_overview import Layer1OverviewGenerator
-            from ai_code2doc.generator.markdown_writer import MarkdownWriter
-            gen = Layer1OverviewGenerator(context.settings)
-            docs = asyncio.run(
-                gen.generate(context.project_root, output_dir, use_llm=bool(context.settings.llm_api_key), changed_files=None)
-            )
-            writer = MarkdownWriter()
-            paths = []
-            for doc in docs:
-                p = output_dir / "layer1" / f"{doc.id}.md"
-                writer.write_doc(p, doc)
-                paths.append(str(p))
-            return ToolResult(tool_call_id=call.id, content=f"Updated Layer 1 ({len(docs)} docs):\n" + "\n".join(f"  - {p}" for p in paths))
+            return ToolResult(tool_call_id=call.id, content="Layer 1 is user-maintained. Use layer3-mcp for dependency graph analysis.", is_error=True)
 
-        elif layer == 2:
+        if layer == 2:
             from ai_code2doc.generator.layer2_modules import Layer2ModuleGenerator
             from ai_code2doc.generator.markdown_writer import MarkdownWriter
             gen = Layer2ModuleGenerator(context.settings)
@@ -64,19 +52,7 @@ def execute(call: ToolCall, context) -> ToolResult:
             return ToolResult(tool_call_id=call.id, content=msg + "\n" + "\n".join(f"  - {p}" for p in paths) if paths else f"No matching modules found for '{module_name}'.")
 
         elif layer == 3:
-            from ai_code2doc.generator.layer3_graph import Layer3GraphGenerator
-            from ai_code2doc.generator.markdown_writer import MarkdownWriter
-            gen = Layer3GraphGenerator(context.settings)
-            docs = asyncio.run(
-                gen.generate(context.project_root, output_dir, use_llm=bool(context.settings.llm_api_key), changed_files=None)
-            )
-            writer = MarkdownWriter()
-            paths = []
-            for doc in docs:
-                p = output_dir / "layer3" / f"{doc.id}.md"
-                writer.write_doc(p, doc)
-                paths.append(str(p))
-            return ToolResult(tool_call_id=call.id, content=f"Updated Layer 3 ({len(docs)} docs):\n" + "\n".join(f"  - {p}" for p in paths))
+            return ToolResult(tool_call_id=call.id, content="Layer 3 is handled by the standalone layer3-mcp package. Use `layer3-mcp --repo <path>` for dependency graph analysis.", is_error=True)
 
         else:
             return ToolResult(tool_call_id=call.id, content=f"Unknown layer: {layer}", is_error=True)

@@ -3,32 +3,8 @@
 from __future__ import annotations
 
 from ai_code2doc.generator.prompt_templates import (
-    format_layer1_prompt,
     format_layer2_prompt,
 )
-
-
-class TestFormatLayer1Prompt:
-    def test_contains_all_fields(self) -> None:
-        result = format_layer1_prompt(
-            project_name="myproject",
-            tech_stack="Python, FastAPI",
-            directory_tree="src/\n  main.py",
-            entry_points="main.py",
-            key_files="main.py: entry point",
-        )
-        assert "myproject" in result
-        assert "Python, FastAPI" in result
-        assert "src/" in result
-        assert "main.py" in result
-
-    def test_contains_project_name_and_instructions(self) -> None:
-        result = format_layer1_prompt(
-            project_name="test", tech_stack="C",
-            directory_tree=".", entry_points="main.c", key_files="",
-        )
-        assert "test" in result
-        assert "project overview" in result.lower() or "overview" in result.lower()
 
 
 class TestFormatLayer2Prompt:

@@ -12,7 +12,7 @@ KEEP_EXTENSIONS: list[str] = [
 # Prompt templates
 # ---------------------------------------------------------------------------
 
-PROMPT_LAYER1: str = """\
+PROMPT_LAYER2: str = """\
 You are a senior software architect analysing a codebase to produce a \
 high-level overview document.
 

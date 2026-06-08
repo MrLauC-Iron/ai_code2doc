@@ -1,25 +1,5 @@
 from __future__ import annotations
 
-PROMPT_LAYER1 = """You are a code architecture analyst. Analyze the following project structure and generate a comprehensive project overview.
-
-Project Name: {project_name}
-Tech Stack: {tech_stack}
-Directory Structure:
-{directory_tree}
-
-Entry Points: {entry_points}
-Key Files: {key_files}
-
-Generate a project overview covering:
-1. Project purpose and description
-2. Architecture type (MVC, microservices, monolith, etc.)
-3. Key design patterns used
-4. Technology choices and their implications
-5. Overall code organization assessment
-
-Respond in Markdown format with clear sections.
-"""
-
 PROMPT_LAYER2 = """You are a code module analyst. Analyze the following module and generate a detailed summary.
 
 Module: {module_name}
@@ -40,17 +20,6 @@ Generate a module summary covering:
 
 Respond in Markdown format.
 """
-
-def format_layer1_prompt(
-    project_name: str, tech_stack: str, directory_tree: str,
-    entry_points: str, key_files: str,
-) -> str:
-    return PROMPT_LAYER1.format(
-        project_name=project_name, tech_stack=tech_stack,
-        directory_tree=directory_tree, entry_points=entry_points,
-        key_files=key_files,
-    )
-
 
 def format_layer2_prompt(
     module_name: str, module_path: str, file_summaries: str,

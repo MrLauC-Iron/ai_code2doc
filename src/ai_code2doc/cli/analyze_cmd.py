@@ -138,34 +138,13 @@ def register(app: typer.Typer) -> None:
             nonlocal all_docs
 
             if 1 in selected_layers:
-                from ai_code2doc.generator.layer1_overview import Layer1OverviewGenerator
-
-                gen1 = Layer1OverviewGenerator(settings)
-                with Progress(
-                    SpinnerColumn(),
-                    TextColumn("[progress.description]{task.description}"),
-                    console=console,
-                ) as progress:
-                    task = progress.add_task(
-                        "Generating Layer 1: Project overview...", total=None
-                    )
-                    docs = await gen1.generate(
-                        project_root,
-                        output_dir,
-                        use_llm=not no_llm,
-                        changed_files=changed_files,
-                    )
-                    all_docs.extend(docs)
-                    progress.update(task, completed=True)
-
-                if docs:
-                    console.print(
-                        "  [green]\u2713[/green] Layer 1: Project overview generated"
-                    )
-                else:
-                    console.print(
-                        "  [dim]Layer 1: Skipped (no changes)[/dim]"
-                    )
+                console.print(
+                    "  [yellow]Layer 1 is now user-maintained.[/yellow]"
+                )
+                console.print(
+                    "  Project overview documentation should be maintained by the project itself."
+                )
+                selected_layers = [l for l in selected_layers if l != 1]
 
             if 2 in selected_layers:
                 from ai_code2doc.generator.layer2_modules import Layer2ModuleGenerator
