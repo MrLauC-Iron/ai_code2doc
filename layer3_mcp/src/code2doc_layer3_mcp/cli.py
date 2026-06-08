@@ -92,6 +92,7 @@ def main(
             transport=transport,
             host=host,
             port=port,
+            poll_interval=poll_interval,
         )
     else:
         # Local mode: --project or direct db_path

@@ -342,12 +342,14 @@ def create_server(
     transport: str = "stdio",
     host: str = "0.0.0.0",
     port: int = 8000,
+    poll_interval: int = 0,
 ) -> FastMCP:
     """Create and configure a FastMCP instance.
 
     Args:
         db_path: Direct path to a dependency graph DB (local mode).
         repo_path: Path to a git repo for on-demand branch builds (remote mode).
+        poll_interval: Poll interval in seconds (0 = disabled).
         transport: Transport mode: "stdio" or "http".
         host: Bind address for HTTP transport.
         port: Port for HTTP transport.
@@ -365,7 +367,7 @@ def create_server(
         from code2doc_layer3_mcp.git_poller import GitPoller
 
         _branch_manager = BranchManager(repo_path)
-        _git_poller = GitPoller(repo_path, _branch_manager)
+        _git_poller = GitPoller(repo_path, _branch_manager, poll_interval=poll_interval)
 
     mcp = FastMCP(
         "code2doc-layer3-mcp",

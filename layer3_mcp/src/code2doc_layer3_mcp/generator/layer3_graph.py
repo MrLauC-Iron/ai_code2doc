@@ -70,6 +70,7 @@ class Layer3GraphGenerator:
         output_dir: Path,
         use_llm: bool = True,
         changed_files: list[Path] | None = None,
+        branch: str | None = None,
     ) -> list[KnowledgeDocument]:
         """Build the full dependency graph and produce the analysis document.
 
@@ -246,7 +247,7 @@ class Layer3GraphGenerator:
             from code2doc_core.utils.hashing import compute_file_hash
             from code2doc_core.utils.git import get_current_branch, sanitize_branch_name
 
-            branch = get_current_branch(project_root)
+            branch = branch or get_current_branch(project_root)
             if branch:
                 db_path = (
                     output_dir

@@ -11,6 +11,11 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_branch_name(branch: str) -> str:
+    """Sanitize a branch name for use as a directory name."""
+    return branch.replace("/", "-").replace("\\", "-").strip("-")
+
+
 class BranchManager:
     """Manages git branches and Layer 3 DB lifecycle."""
 
@@ -53,19 +58,10 @@ class BranchManager:
 
     def _run_analyze(self) -> None:
         """Run Layer 3 analysis in-process (no subprocess)."""
-        from code2doc_layer3_mcp.generator.layer3_graph import Layer3GraphGenerator
-
-        project_root = self.repo_path
-        output_dir = project_root / ".ai_code2doc"
-
-        generator = Layer3GraphGenerator()
-        import asyncio
-        asyncio.run(generator.generate(
-            project_root=project_root,
-            output_dir=output_dir,
-            use_llm=False,
-            changed_files=None,
-        ))
+        self._run_analyze_on_path(
+            project_root=self.repo_path,
+            output_dir=self.repo_path / ".ai_code2doc",
+        )
 
     def ensure_repo(self) -> None:
         """Ensure the git repo exists and is valid."""
@@ -107,7 +103,11 @@ class BranchManager:
         return db_path
 
     async def _build_branch(self, branch: str) -> None:
-        """Fetch, checkout, and analyze a branch."""
+        """Fetch remote and analyze a branch using detached worktree (read-only).
+
+        Creates a temporary detached worktree to check out the branch without
+        affecting the working directory, then runs Layer 3 analysis on it.
+        """
         loop = asyncio.get_event_loop()
 
         # 1. git fetch
@@ -118,21 +118,74 @@ class BranchManager:
         if result.returncode != 0:
             logger.warning("git fetch failed: %s", result.stderr.strip())
 
-        # 2. git checkout
-        logger.info("Checking out branch '%s'...", branch)
-        result = await loop.run_in_executor(
-            None, self._run_git, "checkout", branch
-        )
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"git checkout failed: {result.stderr.strip()}"
-            )
+        # 2. Create a detached worktree for analysis (does not affect working dir)
+        worktree_path = self.repo_path / ".ai_code2doc" / "layer3" / "_worktrees" / _sanitize_branch_name(branch)
+        worktree_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # 3. Run Layer 3 analysis in-process
+        if worktree_path.exists():
+            # Reuse existing worktree by pulling latest
+            result = await loop.run_in_executor(
+                None, self._run_git, "-C", str(worktree_path), "fetch", "origin", branch
+            )
+            if result.returncode == 0:
+                result = await loop.run_in_executor(
+                    None, self._run_git, "-C", str(worktree_path), "reset", "--hard", "origin/" + branch
+                )
+                logger.info("Updated existing worktree for '%s'", branch)
+        else:
+            result = await loop.run_in_executor(
+                None, self._run_git, "worktree", "add", str(worktree_path), "origin/" + branch
+            )
+            if result.returncode != 0:
+                # Cleanup failed worktree
+                await loop.run_in_executor(
+                    None, self._run_git, "worktree", "remove", str(worktree_path)
+                )
+                raise RuntimeError(
+                    f"git worktree add failed for branch '{branch}': {result.stderr.strip()}"
+                )
+            logger.info("Created detached worktree for '%s' at %s", branch, worktree_path)
+
+        # 3. Run Layer 3 analysis on the worktree, writing output to the repo
         logger.info("Running Layer 3 analysis for branch '%s'...", branch)
-        self._run_analyze()
+        output_dir = self.repo_path / ".ai_code2doc"
+        self._run_analyze_on_path(
+            project_root=worktree_path,
+            output_dir=output_dir,
+            branch=branch,
+        )
 
         logger.info("Branch '%s' Layer 3 build complete.", branch)
+
+    def _run_analyze_on_path(
+        self,
+        project_root: Path,
+        output_dir: Path,
+        branch: str | None = None,
+    ) -> None:
+        """Run Layer 3 analysis on a specific directory (e.g. worktree).
+
+        Parameters
+        ----------
+        project_root:
+            Directory to analyze (e.g. a worktree checkout).
+        output_dir:
+            Where to write artifacts (``.ai_code2doc/layer3/...``).
+        branch:
+            Explicit branch name; overrides ``git rev-parse`` inside the
+            generator, which would fail in detached worktrees.
+        """
+        from code2doc_layer3_mcp.generator.layer3_graph import Layer3GraphGenerator
+
+        generator = Layer3GraphGenerator()
+        import asyncio
+        asyncio.run(generator.generate(
+            project_root=project_root,
+            output_dir=output_dir,
+            use_llm=False,
+            changed_files=None,
+            branch=branch,
+        ))
 
     def is_building(self, branch: str) -> bool:
         """Check if a branch build is in progress."""
