@@ -269,17 +269,29 @@ class Layer3GraphGenerator:
                 except Exception:
                     current_hashes[fp] = ""
 
+            # Build FQN -> (start_line, end_line, kind) lookup from parsed file infos
+            symbol_line_info: dict[str, tuple[int | None, int | None, str]] = {}
+            for fi in file_infos:
+                fp = str(fi.path).replace("\\", "/")
+                for func in fi.functions:
+                    symbol_line_info[f"{fp}::{func.name}"] = (func.start_line, func.end_line, "function")
+                for cls in fi.classes:
+                    symbol_line_info[f"{fp}::{cls.name}"] = (cls.start_line, cls.end_line, "class")
+                    for method in cls.methods:
+                        symbol_line_info[f"{fp}::{cls.name}::{method.name}"] = (method.start_line, method.end_line, "method")
+
             # Full rebuild on first run, incremental after
             if not store.get_metadata("version"):
                 store._conn.execute("DELETE FROM edges")
                 store._conn.execute("DELETE FROM nodes")
 
-            # Write file nodes
+            # Write file nodes (with line range)
             for fi in file_infos:
                 fp = str(fi.path).replace("\\", "/")
                 store.upsert_node(
                     node_id=fp, path=fp, name=fi.name,
                     kind="file", file_hash=current_hashes.get(fp),
+                    start_line=1, end_line=fi.line_count,
                 )
 
             # Write import edges and call edges from NetworkX graph
@@ -292,16 +304,22 @@ class Layer3GraphGenerator:
                 # Ensure source node exists
                 if store.get_node(u) is None:
                     u_name = u.rsplit("/", 1)[-1].split("::")[-1] if "::" in u else u.rsplit("/", 1)[-1]
-                    u_kind = "symbol" if "::" in u else "file"
                     u_path = u.split("::")[0] if "::" in u else u
-                    store.upsert_node(node_id=u, path=u_path, name=u_name, kind=u_kind)
+                    u_info = symbol_line_info.get(u, (None, None, "symbol"))
+                    store.upsert_node(
+                        node_id=u, path=u_path, name=u_name, kind=u_info[2],
+                        start_line=u_info[0], end_line=u_info[1],
+                    )
 
                 # Ensure target node exists
                 if store.get_node(v) is None:
                     v_name = v.rsplit("/", 1)[-1].split("::")[-1] if "::" in v else v.rsplit("/", 1)[-1]
-                    v_kind = "symbol" if "::" in v else "file"
                     v_path = v.split("::")[0] if "::" in v else v
-                    store.upsert_node(node_id=v, path=v_path, name=v_name, kind=v_kind)
+                    v_info = symbol_line_info.get(v, (None, None, "symbol"))
+                    store.upsert_node(
+                        node_id=v, path=v_path, name=v_name, kind=v_info[2],
+                        start_line=v_info[0], end_line=v_info[1],
+                    )
 
                 store.upsert_edge(
                     source_id=u, target_id=v, edge_type=edge_type,

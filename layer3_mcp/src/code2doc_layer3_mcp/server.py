@@ -459,6 +459,67 @@ def create_server(
         db = await _resolve_db(branch)
         return _query_get_edges(db, source_id, target_id, edge_type, min_confidence)
 
+    @mcp.tool()
+    async def context(target: str, branch: str = "") -> str:
+        """Get full context for a symbol or file: position, callers, callees, siblings, dependencies."""
+        db = await _resolve_db(branch)
+        store = DependencyStore(db)
+        try:
+            ctx = store.get_symbol_context(target)
+        finally:
+            store.close()
+        if not ctx:
+            return f"No node found for '{target}'."
+
+        lines = [f"## Context: {target}"]
+
+        node = ctx["node"]
+        kind = node.get("kind", "?")
+        sl = node.get("start_line")
+        el = node.get("end_line")
+        pos = f" (line {sl}-{el})" if sl else ""
+        lines.append(f"**Kind:** {kind}{pos}")
+        if node.get("path"):
+            lines.append(f"**File:** `{node['path']}`")
+
+        if ctx.get("parent"):
+            p = ctx["parent"]
+            p_sl = p.get("start_line")
+            p_el = p.get("end_line")
+            p_pos = f" (line {p_sl}-{p_el})" if p_sl else ""
+            lines.append(f"**Parent:** `{p['id']}`{p_pos}")
+
+        if ctx.get("callers"):
+            lines.append(f"\n### Callers ({len(ctx['callers'])})")
+            for e in ctx["callers"]:
+                conf = f"{e['confidence']:.0%}"
+                ln = f":{e['line_number']}" if e.get("line_number") else ""
+                lines.append(f"  - {e['source_id']} (confidence {conf}{ln})")
+
+        if ctx.get("callees"):
+            lines.append(f"\n### Callees ({len(ctx['callees'])})")
+            for e in ctx["callees"]:
+                conf = f"{e['confidence']:.0%}"
+                ln = f":{e['line_number']}" if e.get("line_number") else ""
+                lines.append(f"  - {e['target_id']} (confidence {conf}{ln})")
+
+        if ctx.get("siblings"):
+            lines.append(f"\n### Siblings in file ({len(ctx['siblings'])})")
+            for e in ctx["siblings"][:20]:
+                lines.append(f"  - {e['target_id']}")
+
+        if ctx.get("file_dependents"):
+            lines.append(f"\n### File dependents ({len(ctx['file_dependents'])})")
+            for d in ctx["file_dependents"][:10]:
+                lines.append(f"  - {d}")
+
+        if ctx.get("file_dependencies"):
+            lines.append(f"\n### File dependencies ({len(ctx['file_dependencies'])})")
+            for d in ctx["file_dependencies"][:10]:
+                lines.append(f"  - {d}")
+
+        return "\n".join(lines)
+
     # ------------------------------------------------------------------
     # Branch management tools
     # ------------------------------------------------------------------

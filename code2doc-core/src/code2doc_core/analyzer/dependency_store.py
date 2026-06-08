@@ -35,6 +35,8 @@ class DependencyStore:
                 name       TEXT,
                 kind       TEXT NOT NULL CHECK(kind IN ('file','class','function','method','symbol')),
                 file_hash  TEXT,
+                start_line INTEGER,
+                end_line   INTEGER,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -85,21 +87,25 @@ class DependencyStore:
         name: str,
         kind: str,
         file_hash: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
     ) -> None:
         """Insert or update a node."""
         now = datetime.now(timezone.utc).isoformat()
         self._conn.execute(
             """
-            INSERT INTO nodes (id, path, name, kind, file_hash, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO nodes (id, path, name, kind, file_hash, start_line, end_line, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
-                path      = excluded.path,
-                name      = excluded.name,
-                kind      = excluded.kind,
-                file_hash = excluded.file_hash,
+                path       = excluded.path,
+                name       = excluded.name,
+                kind       = excluded.kind,
+                file_hash  = excluded.file_hash,
+                start_line = excluded.start_line,
+                end_line   = excluded.end_line,
                 updated_at = excluded.updated_at
             """,
-            (node_id, str(path), name, kind, file_hash, now, now),
+            (node_id, str(path), name, kind, file_hash, start_line, end_line, now, now),
         )
 
     def upsert_edge(
@@ -278,6 +284,48 @@ class DependencyStore:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    def get_symbol_context(self, node_id: str) -> dict[str, Any] | None:
+        """Return aggregated context for a node.
+
+        Includes the node itself, parent (for methods), file, callers,
+        callees, sibling symbols, and file-level dependencies.
+        """
+        node = self.get_node(node_id)
+        if not node:
+            return None
+
+        ctx: dict[str, Any] = {"node": node}
+
+        # Parent (e.g. file::Class for a method)
+        if "::" in node_id:
+            parent_id = node_id.rsplit("::", 1)[0]
+            parent = self.get_node(parent_id)
+            if parent:
+                ctx["parent"] = parent
+
+        # File node
+        file_path = node.get("path")
+        if file_path:
+            ctx["file"] = self.get_node(file_path)
+
+        # Call relationships
+        ctx["callers"] = self.callers(node_id)
+        ctx["callees"] = self.callees(node_id)
+
+        # File-level import dependencies
+        if file_path:
+            ctx["file_dependents"] = self.dependents(file_path)
+            ctx["file_dependencies"] = self.dependencies(file_path)
+
+        # Sibling symbols in same file (contains edges)
+        if file_path:
+            ctx["siblings"] = [
+                dict(e) for e in self.get_edges(source_id=file_path, edge_type="contains")
+                if e["target_id"] != node_id
+            ]
+
+        return ctx
+
     # ------------------------------------------------------------------
     # Incremental update
     # ------------------------------------------------------------------
@@ -339,8 +387,8 @@ class DependencyStore:
         for node in data.get("nodes", []):
             self._conn.execute(
                 """
-                INSERT INTO nodes (id, path, name, kind, file_hash, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO nodes (id, path, name, kind, file_hash, start_line, end_line, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     node["id"],
@@ -348,6 +396,8 @@ class DependencyStore:
                     node["name"],
                     node["kind"],
                     node.get("file_hash"),
+                    node.get("start_line"),
+                    node.get("end_line"),
                     node["created_at"],
                     node["updated_at"],
                 ),
