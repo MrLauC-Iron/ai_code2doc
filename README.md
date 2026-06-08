@@ -12,6 +12,7 @@ AI Agent that analyzes Python/C/C++ projects and generates layered code knowledg
 - **Web UI**: Interactive documentation viewer with API endpoints
 - **CLI**: Full command-line interface for analysis, serving, and querying
 - **MCP Server**: Layer 3 dependency graph queries via Model Context Protocol
+- **Layer 2 HTTP Server**: Standalone module documentation server with on-demand LLM updates
 
 ## Supported Languages
 
@@ -27,9 +28,10 @@ AI Agent that analyzes Python/C/C++ projects and generates layered code knowledg
 # Install all packages (in the monorepo root)
 pip install -e code2doc-core/
 pip install -e ".[dev]"
+pip install -e layer2_mcp/
 pip install -e layer3_mcp/
 
-# Analyze a project (Layer 1 + Layer 2)
+# Analyze a project (Layer 1)
 ai-code2doc analyze /path/to/project
 
 # Full analysis (ignore incremental state)
@@ -46,6 +48,56 @@ ai-code2doc query /path/to/project "How does authentication work?"
 
 # Check analysis status
 ai-code2doc status /path/to/project
+```
+
+## Layer 2: Module Documentation Server (layer2-mcp)
+
+Layer 2 is a standalone HTTP server for managing module-level documentation. It serves pre-generated module docs and can update them on-the-fly using an LLM when you POST task context (e.g., after completing a code change).
+
+### Installation
+
+```bash
+pip install ./layer2_mcp
+```
+
+### Start the Server
+
+```bash
+layer2-mcp serve /path/to/project --port 8001
+```
+
+The server reads/writes module documentation files from `<project>/modules/`.
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LAYER2_LLM_API_KEY` | *(empty)* | OpenAI-compatible API key (required for `POST /update`) |
+| `LAYER2_LLM_BASE_URL` | `https://api.openai.com/v1` | LLM API base URL |
+| `LAYER2_LLM_MODEL` | `gpt-4o` | Model to use for documentation generation |
+| `LAYER2_LLM_MAX_TOKENS` | `4096` | Max tokens per LLM response |
+| `LAYER2_LLM_TEMPERATURE` | `0.1` | LLM temperature |
+
+### HTTP Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/modules` | List all modules (optionally `?query=xxx` to search) |
+| `GET` | `/modules/{name}` | Get a specific module's documentation |
+| `POST` | `/update` | Update module docs with task context (requires LLM) |
+
+**POST /update** accepts a JSON body:
+
+```json
+{
+  "modules": ["auth", "database"],
+  "task_description": "Add refresh-token rotation",
+  "background": "",
+  "layer1_overview": "",
+  "code_changes": [
+    {"file": "src/auth/tokens.py", "diff": "@@ ... @@", "action": "modified"}
+  ]
+}
 ```
 
 ## Layer 3: Dependency Graph (layer3-mcp)
@@ -110,13 +162,21 @@ ai_code2doc/
 ├── src/ai_code2doc/            # Main application
 │   └── ai_code2doc/
 │       ├── cli/                # analyze, serve, query, chat, status
-│       ├── generator/          # Layer 1 & 2 document generation
+│       ├── generator/          # Layer 1 document generation
 │       ├── agent/              # REPL agent with tool registry
 │       ├── web/                # FastAPI web UI
 │       ├── config/             # Settings and defaults
 │       ├── llm/                # LLM client, token tracker
 │       ├── vector_store/       # ChromaDB semantic search
 │       └── utils/             # Markdown, logging (main-package-only)
+│
+├── layer2_mcp/                 # Standalone Layer 2 package
+│   └── src/code2doc_layer2_mcp/
+│       ├── server.py           # FastAPI HTTP server
+│       ├── module_store.py     # Module doc CRUD + search
+│       ├── llm_client.py       # LLM-powered doc extraction
+│       ├── config.py           # Settings (env-based)
+│       └── cli.py              # CLI entry point
 │
 ├── layer3_mcp/                 # Standalone Layer 3 package
 │   └── src/code2doc_layer3_mcp/
@@ -135,12 +195,14 @@ ai_code2doc/
 
 ```
 code2doc-core   ← shared infrastructure (parser, scanner, analyzer, models, utils)
-      ↑                 ↑
-ai_code2doc      layer3_mcp
-(layer 1/2)       (layer 3: generate + query + poll)
+      ↑           ↑           ↑
+ai_code2doc   layer2_mcp   layer3_mcp
+(layer 1)    (layer 2:     (layer 3:
+              module docs    generate + query + poll)
+              HTTP server)
 ```
 
-`ai_code2doc` and `layer3_mcp` have no direct dependency — both depend only on `code2doc-core`.
+`ai_code2doc`, `layer2_mcp`, and `layer3_mcp` have no direct dependency on each other — all three depend only on `code2doc-core`.
 
 ## Configuration
 
@@ -158,6 +220,9 @@ AI_CODE2DOC_LOG_LEVEL=INFO
 ```bash
 # Main package tests
 python -m pytest tests/ -v --tb=short
+
+# layer2_mcp tests
+cd layer2_mcp && python -m pytest tests/ -v --tb=short
 
 # layer3_mcp tests
 cd layer3_mcp && python -m pytest tests/ -v --tb=short
