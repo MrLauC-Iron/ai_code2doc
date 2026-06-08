@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.models.build import CMakeProjectInfo, CMakeTarget
-from ai_code2doc.parser.languages.c_cpp import CCppImportResolver
+from code2doc_core.models.build import CMakeProjectInfo, CMakeTarget
+from code2doc_core.parser.languages.c_cpp import CCppImportResolver
 
 
 class TestResolverWithCMakeInfo:
@@ -121,7 +121,7 @@ class TestResolverWithCMakeInfo:
 
     def test_sample_c_project_include_resolution(self, sample_c_project: Path) -> None:
         """Test include resolution on the sample C project with CMake info."""
-        from ai_code2doc.parser.build.cmake_parser import CMakeParser
+        from code2doc_core.parser.build.cmake_parser import CMakeParser
 
         cmake_info = CMakeParser().parse(sample_c_project)
         resolver = CCppImportResolver(cmake_info=cmake_info)

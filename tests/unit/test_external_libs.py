@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ai_code2doc.analyzer.external_libs import is_external_call
+from code2doc_core.analyzer.external_libs import is_external_call
 
 
 class TestExternalLibs:

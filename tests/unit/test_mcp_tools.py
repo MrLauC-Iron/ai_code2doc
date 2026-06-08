@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ai_code2doc.analyzer.dependency_store import DependencyStore
+from code2doc_core.analyzer.dependency_store import DependencyStore
 from ai_code2doc.mcp.tools import (
     _handle_dependents,
     _handle_dependencies,

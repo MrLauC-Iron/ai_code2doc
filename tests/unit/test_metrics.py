@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.analyzer.metrics import MetricsCalculator, FileMetrics, ProjectMetrics
-from ai_code2doc.models.module import FileInfo, FunctionInfo, ClassInfo, InterfaceInfo, ImportInfo
+from code2doc_core.analyzer.metrics import MetricsCalculator, FileMetrics, ProjectMetrics
+from code2doc_core.models.module import FileInfo, FunctionInfo, ClassInfo, InterfaceInfo, ImportInfo
 
 
 class TestMetricsCalculator:

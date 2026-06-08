@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ai_code2doc.models.module import FileInfo, FunctionInfo
-from ai_code2doc.utils.parse_cache import ParseCache
+from code2doc_core.models.module import FileInfo, FunctionInfo
+from code2doc_core.utils.parse_cache import ParseCache
 
 
 @pytest.fixture

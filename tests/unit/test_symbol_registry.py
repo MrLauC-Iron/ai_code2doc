@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from ai_code2doc.analyzer.symbol_registry import SymbolRegistry
-from ai_code2doc.models.graph import SymbolDefinition, CallSite
+from code2doc_core.analyzer.symbol_registry import SymbolRegistry
+from code2doc_core.models.graph import SymbolDefinition, CallSite
 
 
 class TestSymbolRegistry:
@@ -69,7 +69,7 @@ class TestSymbolRegistry:
         assert len(reg.get_by_file("b.py")) == 1
 
     def test_add_from_file_info(self) -> None:
-        from ai_code2doc.models.module import FileInfo, FunctionInfo, ClassInfo
+        from code2doc_core.models.module import FileInfo, FunctionInfo, ClassInfo
         reg = SymbolRegistry()
         fi = FileInfo(
             path=Path("src/parser.py"), name="parser.py",
@@ -255,7 +255,7 @@ class TestSymbolRegistry:
 
     def test_resolve_with_type_scope(self) -> None:
         """Variable type inference should resolve parser.parse_file."""
-        from ai_code2doc.analyzer.type_inferrer import TypeScope
+        from code2doc_core.analyzer.type_inferrer import TypeScope
         reg = SymbolRegistry()
         reg.add(SymbolDefinition(
             fqn="src/parser.py::TreeSitterParser",
@@ -282,7 +282,7 @@ class TestSymbolRegistry:
         assert "parse_file" in resolved.callee_fqn
 
     def test_resolve_arrow_method_with_type_scope(self) -> None:
-        from ai_code2doc.analyzer.type_inferrer import TypeScope
+        from code2doc_core.analyzer.type_inferrer import TypeScope
         reg = SymbolRegistry()
         reg.add(SymbolDefinition(
             fqn="src/mat.cpp::Mat", name="Mat",
@@ -303,7 +303,7 @@ class TestSymbolRegistry:
         assert "rows" in resolved.callee_fqn
 
     def test_resolve_this_arrow_method(self) -> None:
-        from ai_code2doc.analyzer.type_inferrer import TypeScope
+        from code2doc_core.analyzer.type_inferrer import TypeScope
         reg = SymbolRegistry()
         reg.add(SymbolDefinition(
             fqn="src/svc.cpp::Service", name="Service",
@@ -323,7 +323,7 @@ class TestSymbolRegistry:
         assert resolved.callee_fqn == "src/svc.cpp::Service.validate"
 
     def test_resolve_namespace_qualified_type(self) -> None:
-        from ai_code2doc.analyzer.type_inferrer import TypeScope
+        from code2doc_core.analyzer.type_inferrer import TypeScope
         reg = SymbolRegistry()
         reg.add(SymbolDefinition(
             fqn="src/mat.cpp::Mat", name="Mat",

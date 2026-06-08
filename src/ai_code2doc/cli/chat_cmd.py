@@ -48,7 +48,7 @@ def register(app: typer.Typer) -> None:
 
         analysis_result = AnalysisResult()
         try:
-            from ai_code2doc.scanner.change_detector import ChangeDetector
+            from code2doc_core.scanner.change_detector import ChangeDetector
             detector = ChangeDetector(project_root, settings.output_dir)
             state = detector.load_state()
             analysis_result.total_files = len(state.file_states)

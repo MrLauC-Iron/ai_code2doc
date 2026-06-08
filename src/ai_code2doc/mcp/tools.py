@@ -11,7 +11,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Callable
 
-from ai_code2doc.analyzer.dependency_store import DependencyStore
+from code2doc_core.analyzer.dependency_store import DependencyStore
 
 
 # ======================================================================

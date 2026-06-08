@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from ai_code2doc.analyzer.call_graph_builder import CallGraphBuilder
-from ai_code2doc.models.graph import CallSite, SymbolDefinition
+from code2doc_core.analyzer.call_graph_builder import CallGraphBuilder
+from code2doc_core.models.graph import CallSite, SymbolDefinition
 
 
 class TestCallGraphBuilder:
     def test_build_single_file(self) -> None:
-        from ai_code2doc.models.module import FileInfo, FunctionInfo
+        from code2doc_core.models.module import FileInfo, FunctionInfo
         builder = CallGraphBuilder(Path("/project"))
         fi = FileInfo(
             path=Path("src/main.py"), name="main.py",
@@ -19,7 +19,7 @@ class TestCallGraphBuilder:
         assert len(sites) >= 2
 
     def test_build_with_resolution(self) -> None:
-        from ai_code2doc.models.module import FileInfo, FunctionInfo
+        from code2doc_core.models.module import FileInfo, FunctionInfo
         builder = CallGraphBuilder(Path("/project"))
 
         fi_a = FileInfo(path=Path("a.py"), name="a.py",
@@ -42,7 +42,7 @@ class TestCallGraphBuilder:
         assert sites == []
 
     def test_build_with_class_methods(self) -> None:
-        from ai_code2doc.models.module import FileInfo, FunctionInfo, ClassInfo
+        from code2doc_core.models.module import FileInfo, FunctionInfo, ClassInfo
         builder = CallGraphBuilder(Path("/project"))
         fi = FileInfo(
             path=Path("service.py"), name="service.py",
@@ -68,7 +68,7 @@ class TestCallGraphBuilder:
         assert len(validate_calls) >= 1
 
     def test_ccpp_extraction_dispatch(self, tmp_path: Path) -> None:
-        from ai_code2doc.models.module import FileInfo, FunctionInfo
+        from code2doc_core.models.module import FileInfo, FunctionInfo
         builder = CallGraphBuilder(tmp_path)
         fi = FileInfo(
             path=tmp_path / "calc.cpp", name="calc.cpp",
@@ -89,7 +89,7 @@ class TestCallGraphBuilder:
         assert len(add_sites) == 0
 
     def test_cpp_type_aware_resolution(self, tmp_path: Path) -> None:
-        from ai_code2doc.models.module import FileInfo, FunctionInfo, ClassInfo
+        from code2doc_core.models.module import FileInfo, FunctionInfo, ClassInfo
         builder = CallGraphBuilder(tmp_path)
 
         fi_mat = FileInfo(
@@ -112,7 +112,7 @@ class TestCallGraphBuilder:
         assert any("rows" in s.callee_name for s in resolved)
 
     def test_build_no_source_text(self) -> None:
-        from ai_code2doc.models.module import FileInfo, FunctionInfo
+        from code2doc_core.models.module import FileInfo, FunctionInfo
         builder = CallGraphBuilder(Path("/project"))
         fi = FileInfo(
             path=Path("no_source.py"), name="no_source.py",

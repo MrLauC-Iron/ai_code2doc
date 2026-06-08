@@ -41,24 +41,6 @@ Generate a module summary covering:
 Respond in Markdown format.
 """
 
-PROMPT_LAYER3 = """You are a dependency analysis expert. Analyze the following dependency graph and provide insights.
-
-Dependency Graph:
-{mermaid_graph}
-
-Cycles Detected: {cycles}
-Key Metrics: {metrics}
-
-Provide:
-1. Architecture dependency patterns
-2. Critical dependency paths
-3. Coupling assessment
-4. Recommendations for improvement
-
-Respond in Markdown format.
-"""
-
-
 def format_layer1_prompt(
     project_name: str, tech_stack: str, directory_tree: str,
     entry_points: str, key_files: str,
@@ -78,10 +60,4 @@ def format_layer2_prompt(
         module_name=module_name, module_path=module_path,
         file_summaries=file_summaries, dependencies=dependencies,
         dependents=dependents,
-    )
-
-
-def format_layer3_prompt(mermaid_graph: str, cycles: str, metrics: str) -> str:
-    return PROMPT_LAYER3.format(
-        mermaid_graph=mermaid_graph, cycles=cycles, metrics=metrics,
     )

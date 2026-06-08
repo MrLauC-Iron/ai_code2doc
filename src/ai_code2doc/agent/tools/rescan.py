@@ -21,8 +21,8 @@ def execute(call: ToolCall, context) -> ToolResult:
     target = call.arguments.get("target", "")
 
     try:
-        from ai_code2doc.scanner.project_scanner import ProjectScanner
-        from ai_code2doc.scanner.change_detector import ChangeDetector
+        from code2doc_core.scanner.project_scanner import ProjectScanner
+        from code2doc_core.scanner.change_detector import ChangeDetector
 
         if target:
             target_path = context.project_root / target
@@ -45,8 +45,8 @@ def execute(call: ToolCall, context) -> ToolResult:
 
         parsed_count = 0
         if changed:
-            from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
-            from ai_code2doc.utils.parse_cache import ParseCache
+            from code2doc_core.parser.tree_sitter_parser import TreeSitterParser
+            from code2doc_core.utils.parse_cache import ParseCache
             parser = TreeSitterParser()
             cache = ParseCache(context.output_dir / "file_infos")
             for f in changed:

@@ -31,11 +31,11 @@ tool_definition = ToolDefinition(
 
 def _build_graph(context) -> nx.DiGraph | None:
     try:
-        from ai_code2doc.analyzer.dependency_graph import DependencyGraphBuilder
-        from ai_code2doc.analyzer.call_graph_builder import CallGraphBuilder
-        from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
-        from ai_code2doc.scanner.project_scanner import ProjectScanner
-        from ai_code2doc.utils.parse_cache import ParseCache
+        from code2doc_core.analyzer.dependency_graph import DependencyGraphBuilder
+        from code2doc_core.analyzer.call_graph_builder import CallGraphBuilder
+        from code2doc_core.parser.tree_sitter_parser import TreeSitterParser
+        from code2doc_core.scanner.project_scanner import ProjectScanner
+        from code2doc_core.utils.parse_cache import ParseCache
 
         scanner = ProjectScanner(context.project_root)
         scan_result = scanner.scan()
@@ -67,8 +67,8 @@ def _build_graph(context) -> nx.DiGraph | None:
 def _get_store(context) -> "DependencyStore | None":
     """Try to open the SQLite store, return None if not available."""
     try:
-        from ai_code2doc.analyzer.dependency_store import DependencyStore
-        from ai_code2doc.utils.git import get_layer3_db_path
+        from code2doc_core.analyzer.dependency_store import DependencyStore
+        from code2doc_core.utils.git import get_layer3_db_path
 
         db_path = get_layer3_db_path(
             context.project_root,
@@ -243,7 +243,7 @@ def execute(call: ToolCall, context) -> ToolResult:
         end = call.arguments.get("end", "")
         if not end:
             return ToolResult(tool_call_id=call.id, content="'end' required for call_chains mode.", is_error=True)
-        from ai_code2doc.analyzer.dependency_graph import DependencyGraphBuilder
+        from code2doc_core.analyzer.dependency_graph import DependencyGraphBuilder
         builder = DependencyGraphBuilder(context.project_root)
         builder.graph = graph
         chains = builder.find_call_chains(target, end)
@@ -255,7 +255,7 @@ def execute(call: ToolCall, context) -> ToolResult:
         return ToolResult(tool_call_id=call.id, content="\n".join(lines))
 
     elif mode == "impact":
-        from ai_code2doc.analyzer.dependency_graph import DependencyGraphBuilder
+        from code2doc_core.analyzer.dependency_graph import DependencyGraphBuilder
         builder = DependencyGraphBuilder(context.project_root)
         builder.graph = graph
         impact = builder.compute_impact(target)

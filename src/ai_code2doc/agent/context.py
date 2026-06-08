@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ai_code2doc.config.settings import Settings
     from ai_code2doc.llm.client import LLMClient
-    from ai_code2doc.models.knowledge import KnowledgeDocument
+    from code2doc_core.models.knowledge import KnowledgeDocument
 
 
 @dataclass

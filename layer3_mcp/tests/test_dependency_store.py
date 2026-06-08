@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from code2doc_layer3_mcp.dependency_store import DependencyStore
+from code2doc_core.analyzer.dependency_store import DependencyStore
 
 
 class TestUpsertAndGet:

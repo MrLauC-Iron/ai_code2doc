@@ -18,6 +18,7 @@ classifiers = [
     "Topic :: Software Development",
 ]
 dependencies = [
+    "code2doc-core",
     "mcp>=1.0",
     "typer>=0.12",
     "uvicorn[standard]>=0.27",

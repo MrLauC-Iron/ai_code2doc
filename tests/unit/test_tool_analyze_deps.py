@@ -23,7 +23,7 @@ class TestAnalyzeDepsTool:
         ctx = AgentContext(project_root=tmp_path, settings=MagicMock())
 
         with patch("ai_code2doc.agent.tools.analyze_deps._build_graph", return_value=mock_graph):
-            with patch("ai_code2doc.analyzer.dependency_graph.DependencyGraphBuilder", return_value=mock_builder):
+            with patch("code2doc_core.analyzer.dependency_graph.DependencyGraphBuilder", return_value=mock_builder):
                 tc = ToolCall(id="c1", name="analyze_deps", arguments={"target": "a", "mode": "call_chains", "end": "c"})
                 result = execute(tc, ctx)
                 assert not result.is_error

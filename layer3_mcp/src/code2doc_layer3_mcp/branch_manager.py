@@ -26,7 +26,7 @@ class BranchManager:
 
     def get_db_path(self, branch: str) -> Path:
         """Return the DB path for a given branch."""
-        from code2doc_layer3_mcp.git import sanitize_branch_name
+        from code2doc_core.utils.git import sanitize_branch_name
 
         return (
             self.repo_path
@@ -51,24 +51,21 @@ class BranchManager:
             timeout=timeout,
         )
 
-    def _run_analyze(self) -> subprocess.CompletedProcess:
-        """Run ai-code2doc analyze for Layer 3 only."""
-        return subprocess.run(
-            [
-                "ai-code2doc",
-                "analyze",
-                "--full",
-                "--layers",
-                "3",
-                "--no-llm",
-                "--no-vector-store",
-                str(self.repo_path),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=1800,
-            cwd=str(self.repo_path.parent),
-        )
+    def _run_analyze(self) -> None:
+        """Run Layer 3 analysis in-process (no subprocess)."""
+        from code2doc_layer3_mcp.generator.layer3_graph import Layer3GraphGenerator
+
+        project_root = self.repo_path
+        output_dir = project_root / ".ai_code2doc"
+
+        generator = Layer3GraphGenerator()
+        import asyncio
+        asyncio.run(generator.generate(
+            project_root=project_root,
+            output_dir=output_dir,
+            use_llm=False,
+            changed_files=None,
+        ))
 
     def ensure_repo(self) -> None:
         """Ensure the git repo exists and is valid."""
@@ -131,13 +128,9 @@ class BranchManager:
                 f"git checkout failed: {result.stderr.strip()}"
             )
 
-        # 3. Run ai-code2doc analyze
-        logger.info("Running ai-code2doc analyze for branch '%s'...", branch)
-        result = await loop.run_in_executor(None, self._run_analyze)
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"ai-code2doc analyze failed: {result.stderr.strip()}"
-            )
+        # 3. Run Layer 3 analysis in-process
+        logger.info("Running Layer 3 analysis for branch '%s'...", branch)
+        self._run_analyze()
 
         logger.info("Branch '%s' Layer 3 build complete.", branch)
 
@@ -187,3 +180,31 @@ class BranchManager:
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
         return None
+
+    async def fetch_remote_heads(self, branches: list[str]) -> dict[str, bool]:
+        """Fetch remote refs and check if each branch has changes.
+
+        Returns dict mapping branch name -> True if remote has new commits.
+        """
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None, self._run_git, "fetch", "--dry-run", "origin"
+        )
+        if result.returncode != 0:
+            logger.warning("git fetch --dry-run failed: %s", result.stderr.strip())
+            return {b: False for b in branches}
+
+        changed: dict[str, bool] = {}
+        for branch in branches:
+            local = await loop.run_in_executor(
+                None, self._run_git, "rev-parse", branch
+            )
+            remote = await loop.run_in_executor(
+                None, self._run_git, "rev-parse", f"origin/{branch}"
+            )
+            if local.returncode == 0 and remote.returncode == 0:
+                changed[branch] = local.stdout.strip() != remote.stdout.strip()
+            else:
+                changed[branch] = False
+
+        return changed

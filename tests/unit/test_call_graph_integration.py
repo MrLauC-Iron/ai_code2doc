@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ai_code2doc.analyzer.dependency_graph import DependencyGraphBuilder
-from ai_code2doc.models.graph import CallSite
+from code2doc_core.analyzer.dependency_graph import DependencyGraphBuilder
+from code2doc_core.models.graph import CallSite
 
 
 class TestDependencyGraphCallEdges:
@@ -55,7 +55,7 @@ class TestDependencyGraphCallEdges:
         assert graph.get_edge_data("a.py", "a.py::main")["edge_type"] == "contains"
 
     def test_existing_import_edges_unchanged(self, tmp_path: Path) -> None:
-        from ai_code2doc.models.module import FileInfo, ImportInfo
+        from code2doc_core.models.module import FileInfo, ImportInfo
 
         # Create the target file so the Python resolver can resolve the import.
         (tmp_path / "b.py").write_text("", encoding="utf-8")

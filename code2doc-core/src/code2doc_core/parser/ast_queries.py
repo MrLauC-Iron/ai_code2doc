@@ -1,0 +1,13 @@
+"""Backward-compatible re-exports.
+
+.. deprecated::
+    Use the helpers in :mod:`code2doc_core.parser.languages._common` instead.
+"""
+
+from code2doc_core.parser.languages._common import (  # noqa: F401
+    get_text as node_text,
+    get_line as node_line,
+    get_end_line as node_end_line,
+)
+
+__all__ = ["node_text", "node_line", "node_end_line"]

@@ -15,16 +15,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ai_code2doc.analyzer.dependency_graph import DependencyGraphBuilder
+from code2doc_core.analyzer.dependency_graph import DependencyGraphBuilder
 from ai_code2doc.config.settings import Settings
 from ai_code2doc.generator.base_generator import BaseGenerator
 from ai_code2doc.generator.markdown_writer import MarkdownWriter
 from ai_code2doc.generator.prompt_templates import format_layer2_prompt
 from ai_code2doc.llm.client import LLMClient
-from ai_code2doc.models.knowledge import KnowledgeDocument
-from ai_code2doc.models.module import FileInfo
-from ai_code2doc.parser.tree_sitter_parser import TreeSitterParser
-from ai_code2doc.scanner.project_scanner import ProjectScanner
+from code2doc_core.models.knowledge import KnowledgeDocument
+from code2doc_core.models.module import FileInfo
+from code2doc_core.parser.tree_sitter_parser import TreeSitterParser
+from code2doc_core.scanner.project_scanner import ProjectScanner
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ class Layer2ModuleGenerator(BaseGenerator):
         scan_result = scanner.scan()
 
         # 2. Parse target files (incremental via cache)
-        from ai_code2doc.utils.parse_cache import ParseCache
+        from code2doc_core.utils.parse_cache import ParseCache
 
         cache = ParseCache(output_dir)
         changed_set = set(changed_files) if changed_files else None

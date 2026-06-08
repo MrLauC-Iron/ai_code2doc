@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ai_code2doc.models.graph import CallSite, DependencyEdge, SymbolDefinition
+from code2doc_core.models.graph import CallSite, DependencyEdge, SymbolDefinition
 
 
 class TestCallSite:

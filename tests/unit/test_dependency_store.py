@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ai_code2doc.analyzer.dependency_store import DependencyStore
+from code2doc_core.analyzer.dependency_store import DependencyStore
 
 
 class TestDependencyStoreInit:

@@ -21,7 +21,7 @@ class OverviewResponse(BaseModel):
 async def get_project(request: Request) -> dict:
     """Get project metadata."""
     root = _get_root(request)
-    from ai_code2doc.analyzer.tech_stack import TechStackDetector
+    from code2doc_core.analyzer.tech_stack import TechStackDetector
 
     detector = TechStackDetector(root)
     tech_stack = detector.detect()
@@ -40,7 +40,7 @@ async def get_overview(request: Request) -> OverviewResponse:
     root = _get_root(request)
     content = _read_layer_file(root, "layer1/README.md")
 
-    from ai_code2doc.analyzer.tech_stack import TechStackDetector
+    from code2doc_core.analyzer.tech_stack import TechStackDetector
 
     detector = TechStackDetector(root)
     tech_stack = detector.detect()

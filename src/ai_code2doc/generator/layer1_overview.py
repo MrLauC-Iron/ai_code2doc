@@ -12,18 +12,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ai_code2doc.analyzer.tech_stack import TechStackDetector
-from ai_code2doc.analyzer.metrics import MetricsCalculator
+from code2doc_core.analyzer.tech_stack import TechStackDetector
+from code2doc_core.analyzer.metrics import MetricsCalculator
 from ai_code2doc.config.settings import Settings
 from ai_code2doc.generator.base_generator import BaseGenerator
 from ai_code2doc.generator.markdown_writer import MarkdownWriter
 from ai_code2doc.generator.prompt_templates import format_layer1_prompt
 from ai_code2doc.llm.client import LLMClient
-from ai_code2doc.models.knowledge import KnowledgeDocument
-from ai_code2doc.scanner.project_scanner import ProjectScanner
+from code2doc_core.models.knowledge import KnowledgeDocument
+from code2doc_core.scanner.project_scanner import ProjectScanner
 
 if TYPE_CHECKING:
-    from ai_code2doc.models.build import CMakeProjectInfo
+    from code2doc_core.models.build import CMakeProjectInfo
 
 
 class Layer1OverviewGenerator(BaseGenerator):
@@ -72,7 +72,7 @@ class Layer1OverviewGenerator(BaseGenerator):
         # 2. Parse CMake build info if available
         cmake_info: CMakeProjectInfo | None = None
         if (project_root / "CMakeLists.txt").is_file():
-            from ai_code2doc.parser.build.cmake_parser import CMakeParser
+            from code2doc_core.parser.build.cmake_parser import CMakeParser
             cmake_info = CMakeParser().parse(project_root)
 
         # 3. Detect the technology stack

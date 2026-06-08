@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from ai_code2doc.models.build import CMakeProjectInfo, CMakeTarget
-from ai_code2doc.parser.build.cmake_parser import CMakeParser
+from code2doc_core.models.build import CMakeProjectInfo, CMakeTarget
+from code2doc_core.parser.build.cmake_parser import CMakeParser
 
 
 @pytest.fixture

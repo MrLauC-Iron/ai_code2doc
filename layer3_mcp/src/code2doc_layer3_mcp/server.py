@@ -8,11 +8,12 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from code2doc_layer3_mcp.dependency_store import DependencyStore
+from code2doc_core.analyzer.dependency_store import DependencyStore
 
 # Module-level state set by create_server()
 _default_db: Path | None = None
 _branch_manager: Any | None = None  # BranchManager, imported lazily to avoid circular deps
+_git_poller: Any | None = None  # GitPoller
 
 
 async def _resolve_db(branch: str = "") -> Path:
@@ -342,14 +343,17 @@ def create_server(
         db_path: Direct path to a dependency graph DB (local mode).
         repo_path: Path to a git repo for on-demand branch builds (remote mode).
     """
-    global _default_db, _branch_manager
+    global _default_db, _branch_manager, _git_poller
     _default_db = db_path
     _branch_manager = None
+    _git_poller = None
 
     if repo_path:
         from code2doc_layer3_mcp.branch_manager import BranchManager
+        from code2doc_layer3_mcp.git_poller import GitPoller
 
         _branch_manager = BranchManager(repo_path)
+        _git_poller = GitPoller(repo_path, _branch_manager)
 
     mcp = FastMCP(
         "code2doc-layer3-mcp",
@@ -486,5 +490,37 @@ def create_server(
             for b in branches:
                 lines.append(f"  - {b['branch']}")
             return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # Git poller tools
+    # ------------------------------------------------------------------
+
+    @mcp.tool()
+    async def poll_start(interval: int = 0) -> str:
+        """Start the background git poller. Optionally override poll interval (seconds)."""
+        if _git_poller is None:
+            return "Error: poller not configured (no --repo)."
+        if interval > 0:
+            _git_poller.poll_interval = interval
+        await _git_poller.start()
+        status = _git_poller.get_status()
+        return f"Poller started (interval={status['poll_interval']}s)"
+
+    @mcp.tool()
+    async def poll_stop() -> str:
+        """Stop the background git poller."""
+        if _git_poller is None:
+            return "Error: poller not configured (no --repo)."
+        await _git_poller.stop()
+        return "Poller stopped."
+
+    @mcp.tool()
+    def poll_status() -> str:
+        """Get current poller status (running, last poll, last rebuild)."""
+        if _git_poller is None:
+            return "Error: poller not configured (no --repo)."
+        import json
+
+        return json.dumps(_git_poller.get_status(), indent=2)
 
     return mcp

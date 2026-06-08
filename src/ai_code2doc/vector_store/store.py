@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ai_code2doc.config.settings import Settings
-from ai_code2doc.models.knowledge import KnowledgeDocument
+from code2doc_core.models.knowledge import KnowledgeDocument
 from ai_code2doc.vector_store.schemas import DocumentChunk, SearchResponse, SearchResult
 
 
