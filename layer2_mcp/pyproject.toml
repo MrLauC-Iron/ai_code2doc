@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "code2doc-layer2-mcp"
+version = "0.1.0"
+description = "HTTP server for Layer 2 module documentation management"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "ai-code2doc contributors"}]
+keywords = ["documentation", "code-analysis", "module-docs"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development",
+]
+dependencies = [
+    "code2doc-core",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "typer>=0.12",
+    "openai>=1.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+layer2-mcp = "code2doc_layer2_mcp.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/code2doc_layer2_mcp"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
