@@ -14,6 +14,9 @@ from code2doc_core.analyzer.dependency_store import DependencyStore
 _default_db: Path | None = None
 _branch_manager: Any | None = None  # BranchManager, imported lazily to avoid circular deps
 _git_poller: Any | None = None  # GitPoller
+_transport: str = "stdio"
+_host: str = "0.0.0.0"
+_port: int = 8000
 
 
 async def _resolve_db(branch: str = "") -> Path:
@@ -336,17 +339,26 @@ def _query_get_edges(
 def create_server(
     db_path: Path | None = None,
     repo_path: Path | None = None,
+    transport: str = "stdio",
+    host: str = "0.0.0.0",
+    port: int = 8000,
 ) -> FastMCP:
     """Create and configure a FastMCP instance.
 
     Args:
         db_path: Direct path to a dependency graph DB (local mode).
         repo_path: Path to a git repo for on-demand branch builds (remote mode).
+        transport: Transport mode: "stdio" or "http".
+        host: Bind address for HTTP transport.
+        port: Port for HTTP transport.
     """
-    global _default_db, _branch_manager, _git_poller
+    global _default_db, _branch_manager, _git_poller, _transport, _host, _port
     _default_db = db_path
     _branch_manager = None
     _git_poller = None
+    _transport = transport
+    _host = host
+    _port = port
 
     if repo_path:
         from code2doc_layer3_mcp.branch_manager import BranchManager
@@ -524,3 +536,38 @@ def create_server(
         return json.dumps(_git_poller.get_status(), indent=2)
 
     return mcp
+
+
+def run_server(
+    db_path: Path | None = None,
+    repo_path: Path | None = None,
+    transport: str = "stdio",
+    host: str = "0.0.0.0",
+    port: int = 8000,
+) -> None:
+    """Create and run the MCP server (convenience wrapper).
+
+    Args:
+        db_path: Direct path to a dependency graph DB (local mode).
+        repo_path: Path to a git repo for on-demand branch builds (remote mode).
+        transport: Transport mode: "stdio" or "http".
+        host: Bind address for HTTP transport.
+        port: Port for HTTP transport.
+    """
+    server = create_server(
+        db_path=db_path,
+        repo_path=repo_path,
+        transport=transport,
+        host=host,
+        port=port,
+    )
+    if transport == "http":
+        import sys
+
+        print(
+            f"code2doc-layer3-mcp HTTP server starting on {host}:{port}",
+            file=sys.stderr,
+        )
+        server.run(transport="streamable-http", host=host, port=port)
+    else:
+        server.run(transport="stdio")

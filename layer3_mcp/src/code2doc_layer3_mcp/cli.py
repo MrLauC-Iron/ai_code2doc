@@ -87,19 +87,12 @@ def main(
         manager = BranchManager(resolved_repo)
         manager.ensure_repo()
 
-        server = create_server(repo_path=resolved_repo)
-
-        if transport == "http":
-            import sys
-
-            print(
-                f"code2doc-layer3-mcp HTTP server starting on {host}:{port}",
-                file=sys.stderr,
-            )
-            print(f"Repo: {resolved_repo} (on-demand branch mode)", file=sys.stderr)
-            server.run(transport="streamable-http", host=host, port=port)
-        else:
-            server.run(transport="stdio")
+        server = create_server(
+            repo_path=resolved_repo,
+            transport=transport,
+            host=host,
+            port=port,
+        )
     else:
         # Local mode: --project or direct db_path
         if project:
@@ -125,16 +118,22 @@ def main(
             )
             raise typer.Exit(code=1)
 
-        server = create_server(resolved_db)
+        server = create_server(
+            db_path=resolved_db,
+            transport=transport,
+            host=host,
+            port=port,
+        )
 
-        if transport == "http":
-            import sys
+    if transport == "http":
+        import sys
 
-            print(
-                f"code2doc-layer3-mcp HTTP server starting on {host}:{port}",
-                file=sys.stderr,
-            )
-            print(f"DB: {resolved_db}", file=sys.stderr)
-            server.run(transport="streamable-http", host=host, port=port)
-        else:
-            server.run(transport="stdio")
+        print(
+            f"code2doc-layer3-mcp HTTP server starting on {host}:{port}",
+            file=sys.stderr,
+        )
+    server.run(
+        transport="streamable-http" if transport == "http" else "stdio",
+        host=host,
+        port=port,
+    )
