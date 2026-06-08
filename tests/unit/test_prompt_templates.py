@@ -5,7 +5,6 @@ from __future__ import annotations
 from ai_code2doc.generator.prompt_templates import (
     format_layer1_prompt,
     format_layer2_prompt,
-    format_layer3_prompt,
 )
 
 
@@ -46,15 +45,3 @@ class TestFormatLayer2Prompt:
         assert "routes.py" in result
         assert "models" in result
         assert "main" in result
-
-
-class TestFormatLayer3Prompt:
-    def test_contains_graph_info(self) -> None:
-        result = format_layer3_prompt(
-            mermaid_graph="graph TD\n  A --> B",
-            cycles="None detected",
-            metrics="5 nodes, 4 edges",
-        )
-        assert "graph TD" in result
-        assert "None detected" in result
-        assert "5 nodes" in result

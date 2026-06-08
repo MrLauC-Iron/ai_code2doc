@@ -65,28 +65,3 @@ notable design patterns or abstractions used.
 Respond in well-structured Markdown. Use fenced code blocks for identifiers. \
 Be concise but precise.
 """
-
-PROMPT_LAYER3: str = """\
-You are a software architect documenting the dependency graph of a codebase.
-
-## Task
-Given the following module dependency information, produce a textual \
-description of the dependency graph that covers:
-
-1. **Core Modules** - Which modules sit at the centre of the dependency graph \
-and are depended upon by many others?
-2. **Layer Boundaries** - Identify logical layers (e.g. UI, business logic, \
-data access, infrastructure) and the direction of dependencies between them.
-3. **Coupling Hotspots** - Modules with an unusually large number of direct \
-dependencies that may benefit from refactoring.
-4. **Circular Dependencies** - Any cycles detected in the import graph.
-5. **Orphan Modules** - Modules with no incoming or outgoing dependencies.
-
-## Dependency Data
-```
-{dependencies}
-```
-
-Respond in well-structured Markdown. Use relative module paths as identifiers. \
-Where relevant, suggest improvements to the dependency structure.
-"""

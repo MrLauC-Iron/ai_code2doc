@@ -14,7 +14,6 @@ from ai_code2doc.generator.markdown_writer import MarkdownWriter
 from ai_code2doc.generator.prompt_templates import (
     format_layer1_prompt,
     format_layer2_prompt,
-    format_layer3_prompt,
 )
 
 __all__ = [
@@ -24,5 +23,4 @@ __all__ = [
     "MarkdownWriter",
     "format_layer1_prompt",
     "format_layer2_prompt",
-    "format_layer3_prompt",
 ]
