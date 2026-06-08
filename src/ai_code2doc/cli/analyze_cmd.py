@@ -199,34 +199,13 @@ def register(app: typer.Typer) -> None:
                     )
 
             if 3 in selected_layers:
-                from ai_code2doc.generator.layer3_graph import Layer3GraphGenerator
-
-                gen3 = Layer3GraphGenerator(settings)
-                with Progress(
-                    SpinnerColumn(),
-                    TextColumn("[progress.description]{task.description}"),
-                    console=console,
-                ) as progress:
-                    task = progress.add_task(
-                        "Generating Layer 3: Dependency graph...", total=None
-                    )
-                    docs = await gen3.generate(
-                        project_root,
-                        output_dir,
-                        use_llm=not no_llm,
-                        changed_files=changed_files,
-                    )
-                    all_docs.extend(docs)
-                    progress.update(task, completed=True)
-
-                if docs:
-                    console.print(
-                        "  [green]\u2713[/green] Layer 3: Dependency graph generated"
-                    )
-                else:
-                    console.print(
-                        "  [dim]Layer 3: Skipped (no changes)[/dim]"
-                    )
+                console.print(
+                    "  [yellow]Layer 3 is now handled by the standalone layer3-mcp package.[/yellow]"
+                )
+                console.print(
+                    "  Run [bold]layer3-mcp --repo <path>[/bold] for Layer 3 analysis."
+                )
+                selected_layers = [l for l in selected_layers if l != 3]
 
         asyncio.run(_run_generators())
 
