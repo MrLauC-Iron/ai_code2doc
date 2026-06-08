@@ -74,6 +74,14 @@ class DependencyStore:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_edges_type   ON edges(edge_type)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_nodes_kind   ON nodes(kind)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_nodes_path   ON nodes(path)")
+
+        # Migration: add start_line/end_line to existing tables
+        for col in ("start_line", "end_line"):
+            try:
+                cur.execute(f"ALTER TABLE nodes ADD COLUMN {col} INTEGER")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+
         self._conn.commit()
 
     # ------------------------------------------------------------------
