@@ -82,35 +82,35 @@ LAYER2_LLM_API_KEY=sk-...
 
 ## Layer 2: Module Documentation Server
 
-Standalone HTTP server for module-level documentation. Serves pre-generated docs and updates them on-the-fly via LLM.
+MCP server for module-level documentation. Serves pre-generated docs and updates them on-the-fly via LLM.
 
 ```bash
-layer2-mcp serve /path/to/project --port 8001
+# Stdio (Claude Desktop / IDE integration)
+layer2-mcp --project /path/to/project
+
+# HTTP (remote access)
+layer2-mcp --project /path/to/project --transport http --port 8001
+
+# Direct modules directory
+layer2-mcp --modules-dir /path/to/modules
 ```
 
 Docs are stored under `<project>/modules/`.
 
-### API
+### MCP Tools
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/modules` | List all modules (`?query=xxx` to search) |
-| `GET` | `/modules/{name}` | Get module documentation |
-| `POST` | `/update` | Update module docs with task context (requires LLM) |
+| Tool | Description |
+|------|-------------|
+| `list_modules` | List all modules |
+| `get_module` | Get documentation for a module |
+| `search_modules` | Search modules by keyword |
+| `update_modules` | Update module docs with task context (requires LLM) |
 
-**POST /update** body:
-
-```json
-{
-  "modules": ["auth", "database"],
-  "task_description": "Add refresh-token rotation",
-  "background": "",
-  "layer1_overview": "",
-  "code_changes": [
-    {"file": "src/auth/tokens.py", "diff": "@@ ... @@", "action": "modified"}
-  ]
-}
-```
+**update_modules** parameters:
+- `modules` (required): Comma-separated module names
+- `task_description` (required): What was done
+- `code_changes`: Description of changed files
+- `layer1_overview`: Optional project context
 
 ## Layer 3: Dependency Graph Server
 

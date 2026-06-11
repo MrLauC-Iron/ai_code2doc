@@ -19,7 +19,7 @@ classifiers = [
 ]
 dependencies = [
     "code2doc-core",
-    "fastapi>=0.110",
+    "mcp>=1.0",
     "uvicorn[standard]>=0.27",
     "typer>=0.12",
     "openai>=1.0",
